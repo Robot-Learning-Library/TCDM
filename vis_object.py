@@ -25,11 +25,12 @@ parser.add_argument('--env', default='hammer_use1')
 parser.add_argument('--render', action="store_true", help="Supply flag to render mp4")
 
 
-def render(writer, physics, AA=2, height=256, width=256):
+def render(writer, physics, AA=2, height=512, width=512):
     if writer is None:
         return
     img = physics.render(camera_id=0, height=height * AA, width=width * AA)
-    writer.append_data(cv2.resize(img, (width, height), interpolation=cv2.INTER_AREA))
+    # writer.append_data(cv2.resize(img, (width, height), interpolation=cv2.INTER_AREA))
+    writer.append_data(img, )
 
 
 def rollout(save_folder, writer):
@@ -66,7 +67,7 @@ if __name__ == "__main__":
             if args.render:
                 video_folder = f'obj_traj_video/'
                 os.makedirs(video_folder, exist_ok=True)
-                writer = imageio.get_writer(f'{video_folder}/{args.env}.mp4', fps=25)
+                writer = imageio.get_writer(f'{video_folder}/{args.env}.mp4',quality=10, fps=45)
                 rollout(args.save_folder, writer)
                 writer.close()
             else:
