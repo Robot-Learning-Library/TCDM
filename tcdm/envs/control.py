@@ -8,6 +8,8 @@ import numpy as np
 import copy, collections
 from dm_env import specs
 from dm_control.rl import control
+from tcdm.envs.reference import HandObjectReferenceMotion, random_generate_ref
+from tcdm.envs import generated_traj_abspath
 
 def _denormalize_action(physics, action):
     ac_min, ac_max = physics.ctrl_range.T
@@ -22,13 +24,6 @@ def _normalize_action(physics, action):
     ac_range = 0.5 * (ac_max - ac_min)
     return np.clip((action - ac_mid) / ac_range, -1, 1)
 
-
-import abc
-import collections
-import contextlib
-import dm_env
-from dm_env import specs
-import numpy as np
 
 FLAT_OBSERVATION_KEY = 'observations'
 class Environment(control.Environment):
@@ -265,6 +260,35 @@ class ObjectOnlyReferenceMotionTask(SingleObjectTask):
         obs['goal'] = self.reference_motion.goals.astype(np.float32)
         obs['state'] = np.concatenate((obs['state'], obs['goal']))
         return obs
+
+
+class ArbitraryReferenceMotionTask(ObjectOnlyReferenceMotionTask):
+    def __init__(self, reference_motion, reward_fns, init_key, data_path, task_name, object_name,
+                      reward_weights=None, random=None):
+        self.data_path = data_path
+        self.task_name = task_name
+        reference_motion = self._generate_reference_motion(object_name)
+        super().__init__(reference_motion, reward_fns, init_key, reward_weights, random)
+
+    def _generate_reference_motion(self, object_name=None):
+        motion_file = generated_traj_abspath(self.data_path, self.task_name)
+        if object_name is not None:
+            ref_obj = HandObjectReferenceMotion(object_name, motion_file)
+        else:
+            ref_obj = HandObjectReferenceMotion(self.object_name, motion_file)
+        ref = ref_obj._reference_motion
+        rand_ref = random_generate_ref(copy.copy(ref))
+        ref_obj.set_with_given_ref(rand_ref)
+        return ref_obj
+
+    def initialize_episode(self, physics):
+        new_ref = self._generate_reference_motion()
+        self.reference_motion = new_ref
+        start_state = self.reference_motion.reset()[self._init_key]  # _init_key='motion_planned'
+        with physics.reset_context():
+            physics.data.qpos[:] = start_state['position']
+            physics.data.qvel[:] = start_state['velocity']
+        return super().initialize_episode(physics)
 
 
 _FLOAT_EPS = np.finfo(np.float64).eps
