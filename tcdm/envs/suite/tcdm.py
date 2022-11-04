@@ -9,20 +9,23 @@ import numpy as np
 from tcdm.envs import mj_models, traj_abspath, generated_traj_abspath
 from tcdm.envs import asset_abspath
 from dm_control.utils import containers
-from tcdm.envs.control import Environment, ReferenceMotionTask, ObjectOnlyReferenceMotionTask
+from tcdm.envs.control import Environment, ReferenceMotionTask, ObjectOnlyReferenceMotionTask, ArbitraryReferenceMotionTask
 from tcdm.envs.reference import HandObjectReferenceMotion
 from tcdm.envs.rewards import ObjectMimic
 from tcdm.envs.mujoco import physics_from_mjcf
 
 
-class ObjMimicTask(ObjectOnlyReferenceMotionTask):
+class ObjMimicTask(ArbitraryReferenceMotionTask):
     def __init__(self, object_name, data_path, reward_kwargs, append_time, 
-                       pregrasp_init_key):
+                       pregrasp_init_key, task_name=None):
         reference_motion = HandObjectReferenceMotion(object_name, data_path)
         reward_fn = ObjectMimic(**reward_kwargs)
         self._append_time = append_time
-        super().__init__(reference_motion, [reward_fn], pregrasp_init_key)
-    
+        if task_name is not None:
+            super().__init__(reference_motion, [reward_fn], pregrasp_init_key)
+        else:
+            super().__init__(reference_motion, [reward_fn], pregrasp_init_key, data_path, task_name, object_name)
+
     def get_observation(self, physics):
         obs = super().get_observation(physics)
         
@@ -60,9 +63,19 @@ def _obj_mimic_task_factory(domain_name, name, object_class, robot_class, target
         # build task using reference motion data
         task_name = domain_name + '_' + name
         # print('task name:', task_name)
-        # data_path = traj_abspath(target_path)
-        data_path = generated_traj_abspath(target_path, task_name)
-        task = ObjMimicTask(object_name, data_path, reward_kwargs, append_time, pregrasp)
+
+        vis_object = True
+        arbitrary_ref = True
+
+        if vis_object:
+            data_path = generated_traj_abspath(target_path, task_name)
+        else:
+            data_path = traj_abspath(target_path)
+        
+        if arbitrary_ref:
+            task = ObjMimicTask(object_name, data_path, reward_kwargs, append_time, pregrasp)
+        else:
+            task = ObjMimicTask(object_name, data_path, reward_kwargs, append_time, pregrasp, task_name)
 
         # build physics object and create environment
         physics = physics_from_mjcf(env)
