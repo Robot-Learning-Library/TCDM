@@ -19,8 +19,9 @@ SEE: https://github.com/facebookresearch/DexMan#pre-trained-policies
 """
 
 parser = ArgumentParser(description="Example code for loading pre-trained policies")
-parser.add_argument('--save_folder', default='pretrained_agents/hammer_use1/', 
-                                     help="Save folder containing agent checkpoint/config")
+# parser.add_argument('--save_folder', default='pretrained_agents/hammer_use1/', 
+#                                      help="Save folder containing agent checkpoint/config")
+parser.add_argument('--env', default='hammer_use1')
 parser.add_argument('--render', action="store_true", help="Supply flag to render mp4")
 
 
@@ -54,9 +55,28 @@ def rollout(save_folder, writer):
 if __name__ == "__main__":
     args = parser.parse_args()
 
-    # configure writer
+    ## parse all envs
+    # from tcdm.common import ENVS
+    # for env in ENVS:
+    #     args.env = env
+    #     args.save_folder = f'pretrained_agents/{args.env}/'
+    #     print('Env: ', env)
+    #     # configure writer
+    #     if args.render:
+    #         video_folder = f'obj_traj_video/'
+    #         os.makedirs(video_folder, exist_ok=True)
+    #         writer = imageio.get_writer(f'{video_folder}/{args.env}.mp4', fps=25)
+    #         rollout(args.save_folder, writer)
+    #         writer.close()
+    #     else:
+    #         rollout(args.save_folder, None)
+
+    # parse one env
+    args.save_folder = f'pretrained_agents/{args.env}/'
     if args.render:
-        writer = imageio.get_writer('rollout.mp4', fps=25)
+        video_folder = f'obj_traj_video/'
+        os.makedirs(video_folder, exist_ok=True)
+        writer = imageio.get_writer(f'{video_folder}/{args.env}.mp4', fps=25)
         rollout(args.save_folder, writer)
         writer.close()
     else:
