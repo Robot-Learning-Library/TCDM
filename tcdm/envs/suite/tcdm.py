@@ -6,7 +6,7 @@
 
 import yaml
 import numpy as np
-from tcdm.envs import mj_models, traj_abspath
+from tcdm.envs import mj_models, traj_abspath, generated_traj_abspath
 from tcdm.envs import asset_abspath
 from dm_control.utils import containers
 from tcdm.envs.control import Environment, ReferenceMotionTask, ObjectOnlyReferenceMotionTask
@@ -48,7 +48,7 @@ class Sim2RealMimicTask(ObjMimicTask):
         return self._random.uniform(low, high)
 
 
-def _obj_mimic_task_factory(name, object_class, robot_class, target_path):
+def _obj_mimic_task_factory(domain_name, name, object_class, robot_class, target_path):
     def task(append_time=True, pregrasp='initialized', reward_kwargs={}, environment_kwargs={}):
         # load target data and construct environment
         object_model = object_class()
@@ -58,7 +58,10 @@ def _obj_mimic_task_factory(name, object_class, robot_class, target_path):
         env.attach(object_model)
 
         # build task using reference motion data
-        data_path = traj_abspath(target_path)
+        task_name = domain_name + '_' + name
+        print('task name:', task_name)
+        # data_path = traj_abspath(target_path)
+        data_path = generated_traj_abspath(target_path, task_name)
         task = ObjMimicTask(object_name, data_path, reward_kwargs, append_time, pregrasp)
 
         # build physics object and create environment
@@ -88,7 +91,8 @@ for target_fname in _TCDM_TRAJS:
     except:
         object_class = mj_models.get_object(task_name)
         robot_class = mj_models.get_robot(domain_name)
-    task = _obj_mimic_task_factory(task_name, object_class, 
+
+    task = _obj_mimic_task_factory(domain_name, task_name, object_class, 
                                    robot_class, target_fname)
     TCDM_DOMAINS[domain_name].add('mimic')(task)
 DOOR_SUITE, HAMMER_SUITE, DMANUS_SUITE = [TCDM_DOMAINS[k] for k in ('door', 'hammer', 'dmanus')]

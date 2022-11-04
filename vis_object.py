@@ -56,28 +56,31 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     ## parse all envs
-    # from tcdm.common import ENVS
-    # for env in ENVS:
-    #     args.env = env
-    #     args.save_folder = f'pretrained_agents/{args.env}/'
-    #     print('Env: ', env)
-    #     # configure writer
-    #     if args.render:
-    #         video_folder = f'obj_traj_video/'
-    #         os.makedirs(video_folder, exist_ok=True)
-    #         writer = imageio.get_writer(f'{video_folder}/{args.env}.mp4', fps=25)
-    #         rollout(args.save_folder, writer)
-    #         writer.close()
-    #     else:
-    #         rollout(args.save_folder, None)
+    from tcdm.common import ENVS
+    for env in ENVS:
+        args.env = env
+        args.save_folder = f'pretrained_agents/{args.env}/'
+        print('Env: ', env)
+        try:
+            # configure writer
+            if args.render:
+                video_folder = f'obj_traj_video/'
+                os.makedirs(video_folder, exist_ok=True)
+                writer = imageio.get_writer(f'{video_folder}/{args.env}.mp4', fps=25)
+                rollout(args.save_folder, writer)
+                writer.close()
+            else:
+                rollout(args.save_folder, None)
+        except:
+            print('Env: {env} not work.')
 
     # parse one env
-    args.save_folder = f'pretrained_agents/{args.env}/'
-    if args.render:
-        video_folder = f'obj_traj_video/'
-        os.makedirs(video_folder, exist_ok=True)
-        writer = imageio.get_writer(f'{video_folder}/{args.env}.mp4', fps=25)
-        rollout(args.save_folder, writer)
-        writer.close()
-    else:
-        rollout(args.save_folder, None)
+    # args.save_folder = f'pretrained_agents/{args.env}/'
+    # if args.render:
+    #     video_folder = f'obj_traj_video/'
+    #     os.makedirs(video_folder, exist_ok=True)
+    #     writer = imageio.get_writer(f'{video_folder}/{args.env}.mp4', fps=25)
+    #     rollout(args.save_folder, writer)
+    #     writer.close()
+    # else:
+    #     rollout(args.save_folder, None)

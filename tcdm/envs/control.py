@@ -177,6 +177,7 @@ class SingleObjectTask(Task):
     @property
     def object_name(self):
         return self._object_name
+        
 class ReferenceMotionTask(SingleObjectTask):
     def __init__(self, reference_motion, reward_fns, init_key,
                        reward_weights=None, random=None):
