@@ -19,7 +19,6 @@ def load(domain_name, task_name, task_kwargs=None, environment_kwargs=None, gym_
     domain = _DOMAINS[domain_name]
     if task_name not in domain:
         raise ValueError("Task {} does not exist in domain {}".format(task_name, domain_name))
-
     task_kwargs = {} if task_kwargs is None else task_kwargs
     environment_kwargs = {} if environment_kwargs is None else environment_kwargs
     task_kwargs = dict(task_kwargs, environment_kwargs=environment_kwargs)

@@ -9,13 +9,13 @@ import numpy as np
 from tcdm.envs import mj_models, traj_abspath
 from tcdm.envs import asset_abspath
 from dm_control.utils import containers
-from tcdm.envs.control import Environment, ReferenceMotionTask
+from tcdm.envs.control import Environment, ReferenceMotionTask, ObjectOnlyReferenceMotionTask
 from tcdm.envs.reference import HandObjectReferenceMotion
 from tcdm.envs.rewards import ObjectMimic
 from tcdm.envs.mujoco import physics_from_mjcf
 
 
-class ObjMimicTask(ReferenceMotionTask):
+class ObjMimicTask(ObjectOnlyReferenceMotionTask):
     def __init__(self, object_name, data_path, reward_kwargs, append_time, 
                        pregrasp_init_key):
         reference_motion = HandObjectReferenceMotion(object_name, data_path)
