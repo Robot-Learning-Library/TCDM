@@ -177,7 +177,7 @@ class SingleObjectTask(Task):
     @property
     def object_name(self):
         return self._object_name
-        
+
 class ReferenceMotionTask(SingleObjectTask):
     def __init__(self, reference_motion, reward_fns, init_key,
                        reward_weights=None, random=None):
@@ -240,7 +240,7 @@ class ObjectOnlyReferenceMotionTask(SingleObjectTask):
         super().after_step(physics)
         print(self._step_count)
         physics.data.qpos[:30] = self.start_state['position'][:30]
-        physics.data.qpos[1] = 0.5  # z-axis of hand
+        physics.data.qpos[1] = 0.7  # z-axis of hand
 
         physics.data.qpos[-6:-3] = self.reference_motion._reference_motion['object_translation'][self._step_count]
         eular = quat2euler(self.reference_motion._reference_motion['object_orientation'][self._step_count])
