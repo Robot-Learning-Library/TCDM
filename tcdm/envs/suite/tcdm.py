@@ -59,7 +59,7 @@ def _obj_mimic_task_factory(domain_name, name, object_class, robot_class, target
 
         # build task using reference motion data
         task_name = domain_name + '_' + name
-        print('task name:', task_name)
+        # print('task name:', task_name)
         # data_path = traj_abspath(target_path)
         data_path = generated_traj_abspath(target_path, task_name)
         task = ObjMimicTask(object_name, data_path, reward_kwargs, append_time, pregrasp)

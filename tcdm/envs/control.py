@@ -253,8 +253,12 @@ class ObjectOnlyReferenceMotionTask(SingleObjectTask):
 
     @property
     def substeps(self):
-        # return self.reference_motion.substeps
-        return int(self.reference_motion.substeps / 3) # the above substeps does not replicate the reference
+        print('substeps: ', self.reference_motion.substeps)
+        if self.reference_motion.substeps == 10:
+            right_substeps = int(self.reference_motion.substeps / 3) # the above substeps does not replicate the reference
+        else:
+            right_substeps = self.reference_motion.substeps
+        return right_substeps
 
     def get_observation(self, physics):
         obs = super().get_observation(physics)
