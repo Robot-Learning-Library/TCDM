@@ -25,7 +25,7 @@ import numpy as np
 FLAT_OBSERVATION_KEY = 'observations'
 
 
-class ModifiedEnvironment(dm_env.Environment):
+class Environment(dm_env.Environment):
   """Class for physics-based reinforcement learning environments."""
 
   def __init__(self,
@@ -36,6 +36,7 @@ class ModifiedEnvironment(dm_env.Environment):
                n_sub_steps=None,
                flat_observation=False):
     """Initializes a new `Environment`.
+
     Args:
       physics: Instance of `Physics`.
       task: Instance of `Task`.
@@ -47,6 +48,7 @@ class ModifiedEnvironment(dm_env.Environment):
         `control_timestep` is not specified.
       flat_observation: If True, observations will be flattened and concatenated
         into a single numpy array.
+
     Raises:
       ValueError: If both `n_sub_steps` and `control_timestep` are supplied.
     """
@@ -96,7 +98,8 @@ class ModifiedEnvironment(dm_env.Environment):
       return self.reset()
 
     self._task.before_step(action, self._physics)
-    self._physics.step(self._n_sub_steps)
+    for _ in range(self._n_sub_steps):
+      self._physics.step()
     self._task.after_step(self._physics)
 
     reward = self._task.get_reward(self._physics)
@@ -129,8 +132,10 @@ class ModifiedEnvironment(dm_env.Environment):
 
   def observation_spec(self):
     """Returns the observation specification for this environment.
+
     Infers the spec from the observation, unless the Task implements the
     `observation_spec` method.
+
     Returns:
       An dict mapping observation name to `ArraySpec` containing observation
       shape and dtype.
@@ -158,14 +163,17 @@ class ModifiedEnvironment(dm_env.Environment):
 
 def compute_n_steps(control_timestep, physics_timestep, tolerance=1e-8):
   """Returns the number of physics timesteps in a single control timestep.
+
   Args:
     control_timestep: Control time-step, should be an integer multiple of the
       physics timestep.
     physics_timestep: The time-step of the physics simulation.
     tolerance: Optional tolerance value for checking if `physics_timestep`
       divides `control_timestep`.
+
   Returns:
     The number of physics timesteps in a single control timestep.
+
   Raises:
     ValueError: If `control_timestep` is smaller than `physics_timestep` or if
       `control_timestep` is not an integer multiple of `physics_timestep`.
@@ -197,6 +205,7 @@ class Physics(metaclass=abc.ABCMeta):
   @abc.abstractmethod
   def step(self, n_sub_steps=1):
     """Updates the simulation state.
+
     Args:
       n_sub_steps: Optional number of times to repeatedly update the simulation
         state. Defaults to 1.
@@ -217,12 +226,16 @@ class Physics(metaclass=abc.ABCMeta):
   @contextlib.contextmanager
   def reset_context(self):
     """Context manager for resetting the simulation state.
+
     Sets the internal simulation to a default state when entering the block.
+
     ```python
     with physics.reset_context():
       # Set joint and object positions.
+
     physics.step()
     ```
+
     Yields:
       The `Physics` instance.
     """
@@ -243,6 +256,7 @@ class Physics(metaclass=abc.ABCMeta):
 
   def check_divergence(self):
     """Raises a `PhysicsError` if the simulation state is divergent.
+
     The default implementation is a no-op.
     """
 
@@ -257,8 +271,10 @@ class Task(metaclass=abc.ABCMeta):
   @abc.abstractmethod
   def initialize_episode(self, physics):
     """Sets the state of the environment at the start of each episode.
+
     Called by `control.Environment` at the start of each episode *within*
     `physics.reset_context()` (see the documentation for `base.Physics`).
+
     Args:
       physics: Instance of `Physics`.
     """
@@ -266,7 +282,9 @@ class Task(metaclass=abc.ABCMeta):
   @abc.abstractmethod
   def before_step(self, action, physics):
     """Updates the task from the provided action.
+
     Called by `control.Environment` before stepping the physics engine.
+
     Args:
       action: numpy array or array-like action values, or a nested structure of
         such arrays. Should conform to the specification returned by
@@ -276,10 +294,13 @@ class Task(metaclass=abc.ABCMeta):
 
   def after_step(self, physics):
     """Optional method to update the task after the physics engine has stepped.
+
     Called by `control.Environment` after stepping the physics engine and before
     `control.Environment` calls `get_observation, `get_reward` and
     `get_termination`.
+
     The default implementation is a no-op.
+
     Args:
       physics: Instance of `Physics`.
     """
@@ -287,8 +308,10 @@ class Task(metaclass=abc.ABCMeta):
   @abc.abstractmethod
   def action_spec(self, physics):
     """Returns a specification describing the valid actions for this task.
+
     Args:
       physics: Instance of `Physics`.
+
     Returns:
       A `BoundedArraySpec`, or a nested structure containing `BoundedArraySpec`s
       that describe the shapes, dtypes and elementwise lower and upper bounds
@@ -297,8 +320,10 @@ class Task(metaclass=abc.ABCMeta):
 
   def step_spec(self, physics):
     """Returns a specification describing the time_step for this task.
+
     Args:
       physics: Instance of `Physics`.
+
     Returns:
       A `BoundedArraySpec`, or a nested structure containing `BoundedArraySpec`s
       that describe the shapes, dtypes and elementwise lower and upper bounds
@@ -309,6 +334,7 @@ class Task(metaclass=abc.ABCMeta):
   @abc.abstractmethod
   def get_observation(self, physics):
     """Returns an observation from the environment.
+
     Args:
       physics: Instance of `Physics`.
     """
@@ -316,6 +342,7 @@ class Task(metaclass=abc.ABCMeta):
   @abc.abstractmethod
   def get_reward(self, physics):
     """Returns a reward from the environment.
+
     Args:
       physics: Instance of `Physics`.
     """
@@ -325,9 +352,12 @@ class Task(metaclass=abc.ABCMeta):
 
   def observation_spec(self, physics):
     """Optional method that returns the observation spec.
+
     If not implemented, the Environment infers the spec from the observation.
+
     Args:
       physics: Instance of `Physics`.
+
     Returns:
       A dict mapping observation name to `ArraySpec` containing observation
       shape and dtype.
@@ -337,13 +367,16 @@ class Task(metaclass=abc.ABCMeta):
 
 def flatten_observation(observation, output_key=FLAT_OBSERVATION_KEY):
   """Flattens multiple observation arrays into a single numpy array.
+
   Args:
     observation: A mutable mapping from observation names to numpy arrays.
     output_key: The key for the flattened observation array in the output.
+
   Returns:
     A mutable mapping of the same type as `observation`. This will contain a
     single key-value pair consisting of `output_key` and the flattened
     and concatenated observation array.
+
   Raises:
     ValueError: If `observation` is not a `collections.abc.MutableMapping`.
   """

@@ -22,8 +22,15 @@ def _normalize_action(physics, action):
     ac_range = 0.5 * (ac_max - ac_min)
     return np.clip((action - ac_mid) / ac_range, -1, 1)
 
-# from modified_env import ModifiedEnvironment
-# class Environment(ModifiedEnvironment):
+
+import abc
+import collections
+import contextlib
+import dm_env
+from dm_env import specs
+import numpy as np
+
+FLAT_OBSERVATION_KEY = 'observations'
 class Environment(control.Environment):
     def __init__(self, physics, task, default_camera_id=0, **kwargs):
         self._default_camera_id = default_camera_id
@@ -276,23 +283,13 @@ class ObjectOnlyReferenceMotionTask(SingleObjectTask):
     def before_step(self, action, physics):
         super().before_step(action, physics)
         self.reference_motion.step()
-
-        # physics.data.qpos[:30] = self.start_state['position'][:30]
-        # physics.data.qpos[1] = 0.5  # z-axis of hand
-
-        # physics.data.qpos[-6:-3] = self.reference_motion._reference_motion['object_translation'][self._step_count-1]
-        # eular = quat2euler(self.reference_motion._reference_motion['object_orientation'][self._step_count-1])
-        # physics.data.qpos[-3:] = eular
-        # print(self._step_count, eular)
-        print(self._step_count)
-
         # physics.data.qpos[-3:] = self.start_state['position'][-3:]
-        # physics.data.qvel[-4:-3] = self.start_state['velocity'][-4:-3]
+        # physics.data.qvel[-3:] = self.start_state['velocity'][-3:]
         # import pdb; pdb.set_trace()
 
     def after_step(self, physics):
         super().after_step(physics)
-
+        print(self._step_count)
         physics.data.qpos[:30] = self.start_state['position'][:30]
         physics.data.qpos[1] = 0.5  # z-axis of hand
 
@@ -307,7 +304,8 @@ class ObjectOnlyReferenceMotionTask(SingleObjectTask):
 
     @property
     def substeps(self):
-        return self.reference_motion.substeps
+        # return self.reference_motion.substeps
+        return int(self.reference_motion.substeps / 3) # the above substeps does not replicate the reference
 
     def get_observation(self, physics):
         obs = super().get_observation(physics)
