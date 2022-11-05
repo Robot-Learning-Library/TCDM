@@ -27,7 +27,7 @@ checkpoints:
   name_prefix: 'rl_model'
 
 wandb:
-  project: dummy_proj
+  project: PGDM
   # group: ${exp_name}
   run_name: ${env.name}_${now:%Y-%m-%d}
   sweep_name_prefix: run
