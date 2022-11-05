@@ -64,7 +64,7 @@ def _obj_mimic_task_factory(domain_name, name, object_class, robot_class, target
         task_name = domain_name + '_' + name
         # print('task name:', task_name)
 
-        vis_object = True
+        vis_object = False
         arbitrary_ref = True
 
         if vis_object:
