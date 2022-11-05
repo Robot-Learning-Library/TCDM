@@ -28,5 +28,6 @@ checkpoints:
 
 wandb:
   project: dummy_proj
-  group: ${exp_name}
+  # group: ${exp_name}
+  run_name: ${env.name}_${now:%Y-%m-%d}
   sweep_name_prefix: run
