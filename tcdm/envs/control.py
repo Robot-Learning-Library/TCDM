@@ -233,12 +233,11 @@ class ObjectOnlyReferenceMotionTask(SingleObjectTask):
 
     def after_step(self, physics):
         super().after_step(physics)
-        print(self._step_count)
+        # print(self._step_count)
         physics.data.qpos[:30] = self.start_state['position'][:30]
-        physics.data.qpos[1] = 0.7  # z-axis of hand
-
-        physics.data.qpos[-6:-3] = self.reference_motion._reference_motion['object_translation'][self._step_count]
-        eular = quat2euler(self.reference_motion._reference_motion['object_orientation'][self._step_count])
+        physics.data.qpos[1] = 0.7  #z-axis of hand
+        physics.data.qpos[-6:-3] = self.reference_motion._reference_motion['object_translation'][self._step_count-1]
+        eular = quat2euler(self.reference_motion._reference_motion['object_orientation'][self._step_count-1])
         physics.data.qpos[-3:] = eular
 
     def get_termination(self, physics):
@@ -248,7 +247,7 @@ class ObjectOnlyReferenceMotionTask(SingleObjectTask):
 
     @property
     def substeps(self):
-        print('substeps: ', self.reference_motion.substeps)
+        # print('substeps: ', self.reference_motion.substeps)
         if self.reference_motion.substeps == 10:
             right_substeps = int(self.reference_motion.substeps / 3) # the above substeps does not replicate the reference
         else:
@@ -262,7 +261,7 @@ class ObjectOnlyReferenceMotionTask(SingleObjectTask):
         return obs
 
 
-class ArbitraryReferenceMotionTask(ObjectOnlyReferenceMotionTask):
+class ArbitraryReferenceMotionTask(ReferenceMotionTask):
     def __init__(self, reference_motion, reward_fns, init_key, data_path, task_name, object_name,
                       reward_weights=None, random=None):
         self.data_path = data_path
