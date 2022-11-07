@@ -65,7 +65,7 @@ if __name__ == "__main__":
             try:
                 # configure writer
                 if args.render:
-                    video_folder = f'obj_traj_video_quat_slerp/'
+                    video_folder = f'obj_traj_video/'
                     os.makedirs(video_folder, exist_ok=True)
                     writer = imageio.get_writer(f'{video_folder}/{args.env}.mp4',quality=10, fps=45)
                     rollout(args.save_folder, writer)
@@ -77,7 +77,7 @@ if __name__ == "__main__":
     else: #parse one env
         args.save_folder = f'pretrained_agents/{args.env}/'
         if args.render:
-            video_folder = f'obj_traj_video_quat_slerp/'
+            video_folder = f'obj_traj_video/'
             os.makedirs(video_folder, exist_ok=True)
             writer = imageio.get_writer(f'{video_folder}/{args.env}.mp4', fps=25)
             rollout(args.save_folder, writer)
