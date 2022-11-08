@@ -15,7 +15,7 @@ from tcdm.envs.rewards import ObjectMimic
 from tcdm.envs.mujoco import physics_from_mjcf
 
 
-class ObjMimicTask(ReferenceMotionTask):
+class ObjMimicTask(ArbitraryReferenceMotionTask):
     def __init__(self, object_name, data_path, reward_kwargs, append_time, 
                        pregrasp_init_key, task_name=None):
         reference_motion = HandObjectReferenceMotion(object_name, data_path)
@@ -65,7 +65,7 @@ def _obj_mimic_task_factory(domain_name, name, object_class, robot_class, target
         # print('task name:', task_name)
 
         vis_object = False
-        arbitrary_ref = False
+        arbitrary_ref = True
 
         if vis_object:
             data_path = generated_traj_abspath(target_path, task_name)
