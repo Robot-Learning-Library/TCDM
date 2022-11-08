@@ -1,7 +1,7 @@
 DATE=`date '+%Y%m%d_%H%M'`
 echo "Save as: " $DATE
 
-# declare -a tasks=( )
+# declare -a tasks=('cup-pour1')
 
 declare -a tasks=('banana-pass1') 
 
