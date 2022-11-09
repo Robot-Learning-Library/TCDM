@@ -183,9 +183,19 @@ class HandObjectReferenceMotion(HandReferenceMotion):
         return np.concatenate(g)
 
 import scipy.interpolate as interpolate
+# this is a valid operation range for object on table
+OBJ_X_RANGE = [-0.3, 0.3]
+OBJ_Y_RANGE = [-0.1, 0.5]
+OBJ_Z_RANGE = [-0.1, 0.5]
+OBJ_QUAT_RANGE = [-1., 1]
+OBJ_TRANS_RANGE = [OBJ_X_RANGE, OBJ_Y_RANGE, OBJ_Z_RANGE]
 
-def interpolate_data(data, initial_point=None, random_sample=5):
-    points = np.random.uniform(np.min(data), np.max(data), size=random_sample)
+def interpolate_data(data, range=None, initial_point=None, random_sample=3): # random_sample is the number of random middle points
+    if range is None:
+        points = np.random.uniform(np.min(data), np.max(data), size=random_sample)
+    else:
+        points = np.random.uniform(*range, size=random_sample)
+
     if initial_point is not None: # set the same initial point as original traj
         points[0] = initial_point
     else:
@@ -208,12 +218,12 @@ def random_generate_ref(original_ref):
             initial_point = original_ref['s_0']['motion_planned']['position'][30+i] # set the original position as initial sampled point position
         else:
             initial_point = None
-        new_trans_data.append(interpolate_data(d, initial_point))
+        new_trans_data.append(interpolate_data(d, OBJ_TRANS_RANGE[i], initial_point=initial_point))
     new_trans_data = np.array(new_trans_data).T
 
     new_ori_data = []
     for d in ori_data.T:
-        new_ori_data.append(interpolate_data(d))
+        new_ori_data.append(interpolate_data(d, OBJ_QUAT_RANGE))
     new_ori_data = np.array(new_ori_data).T
 
     new_traj = copy.copy(dict(original_ref))
