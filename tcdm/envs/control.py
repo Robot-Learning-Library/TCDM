@@ -191,6 +191,9 @@ class ReferenceMotionTask(SingleObjectTask):
     def before_step(self, action, physics):
         super().before_step(action, physics)
         self.reference_motion.step()
+        # physics.data.qpos[-3:] = self.start_state['position'][-3:]
+        # physics.data.qvel[-3:] = self.start_state['velocity'][-3:]
+        # import pdb; pdb.set_trace()
 
     def get_termination(self, physics):
         if self.reference_motion.next_done:
@@ -207,70 +210,20 @@ class ReferenceMotionTask(SingleObjectTask):
         obs['state'] = np.concatenate((obs['state'], obs['goal']))
         return obs
 
-
-class ObjectOnlyReferenceMotionTask(SingleObjectTask):
-    def __init__(self, reference_motion, reward_fns, init_key,
-                       reward_weights=None, random=None):
-        self.reference_motion =reference_motion
-        self._init_key = init_key
-        object_name = reference_motion.object_name
-        super().__init__(object_name, reward_fns, reward_weights, random)
-
-    def initialize_episode(self, physics):
-        start_state = self.reference_motion.reset()[self._init_key]  # _init_key='motion_planned'
-        self.start_state = start_state
-        with physics.reset_context():
-            physics.data.qpos[:] = start_state['position']
-            physics.data.qvel[:] = start_state['velocity']
-        return super().initialize_episode(physics)
-
-    def before_step(self, action, physics):
-        super().before_step(action, physics)
-        self.reference_motion.step()
-        # physics.data.qpos[-3:] = self.start_state['position'][-3:]
-        # physics.data.qvel[-3:] = self.start_state['velocity'][-3:]
-        # import pdb; pdb.set_trace()
-
-    def after_step(self, physics):
-        super().after_step(physics)
-        # print(self._step_count)
-        physics.data.qpos[:30] = self.start_state['position'][:30]
-        physics.data.qpos[1] = 0.7  #z-axis of hand
-        physics.data.qpos[-6:-3] = self.reference_motion._reference_motion['object_translation'][self._step_count-1]
-        eular = quat2euler(self.reference_motion._reference_motion['object_orientation'][self._step_count-1])
-        physics.data.qpos[-3:] = eular
-
-    def get_termination(self, physics):
-        if self.reference_motion.next_done:
-            return 0.0
-        return super().get_termination(physics)
-
-    @property
-    def substeps(self):
-        # print('substeps: ', self.reference_motion.substeps)
-        if self.reference_motion.substeps == 10:
-            right_substeps = int(self.reference_motion.substeps / 3) # the above substeps does not replicate the reference
-        else:
-            right_substeps = self.reference_motion.substeps
-        return right_substeps
-
-    def get_observation(self, physics):
-        obs = super().get_observation(physics)
-        obs['goal'] = self.reference_motion.goals.astype(np.float32)
-        obs['state'] = np.concatenate((obs['state'], obs['goal']))
-        return obs
-
-
-class ArbitraryReferenceMotionTask(ReferenceMotionTask):
-    def __init__(self, reference_motion, reward_fns, init_key, data_path, task_name, object_name,
+class GeneralReferenceMotionTask(ReferenceMotionTask):
+    def __init__(self, reference_motion, reward_fns, init_key, data_path, ref_only, auto_ref, task_name, object_name, traj_path,
                       reward_weights=None, random=None):
         self.data_path = data_path
+        self.ref_only = ref_only
+        self.auto_ref = auto_ref
+        self.traj_path = traj_path
         self.task_name = task_name
-        reference_motion = self._generate_reference_motion(object_name)
+        if self.auto_ref:
+            reference_motion = self._generate_reference_motion(object_name)
         super().__init__(reference_motion, reward_fns, init_key, reward_weights, random)
 
     def _generate_reference_motion(self, object_name=None):
-        motion_file = generated_traj_abspath(self.data_path, self.task_name)
+        motion_file = generated_traj_abspath(self.data_path, self.traj_path, self.task_name)
         if object_name is not None:
             ref_obj = HandObjectReferenceMotion(object_name, motion_file)
         else:
@@ -281,13 +234,36 @@ class ArbitraryReferenceMotionTask(ReferenceMotionTask):
         return ref_obj
 
     def initialize_episode(self, physics):
-        new_ref = self._generate_reference_motion()
-        self.reference_motion = new_ref
+        if self.auto_ref:
+            new_ref = self._generate_reference_motion()
+            self.reference_motion = new_ref
         start_state = self.reference_motion.reset()[self._init_key]  # _init_key='motion_planned'
+        self.start_state = start_state
         with physics.reset_context():
             physics.data.qpos[:] = start_state['position']
             physics.data.qvel[:] = start_state['velocity']
         return super().initialize_episode(physics)
+
+    def after_step(self, physics):
+        super().after_step(physics)
+        if self.ref_only: # set position of objects (according to reference) and hand (fixed)
+            # print(self._step_count)
+            physics.data.qpos[:30] = self.start_state['position'][:30]
+            physics.data.qpos[1] = 0.7  #z-axis of hand
+            physics.data.qpos[-6:-3] = self.reference_motion._reference_motion['object_translation'][self._step_count-1]  # x,y,z
+            eular = quat2euler(self.reference_motion._reference_motion['object_orientation'][self._step_count-1])
+            physics.data.qpos[-3:] = eular
+
+    @property
+    def substeps(self):
+        # print('substeps: ', self.reference_motion.substeps)
+        if self.ref_only and self.reference_motion.substeps == 10:
+            substeps = int(self.reference_motion.substeps / 3) # the above substeps does not replicate the reference
+        else:
+            substeps = self.reference_motion.substeps
+        return substeps
+
+        
 
 
 _FLOAT_EPS = np.finfo(np.float64).eps
