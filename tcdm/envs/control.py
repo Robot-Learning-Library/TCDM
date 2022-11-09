@@ -250,7 +250,7 @@ class GeneralReferenceMotionTask(ReferenceMotionTask):
             # print(self._step_count)
             physics.data.qpos[:30] = self.start_state['position'][:30]
             physics.data.qpos[1] = 0.7  #z-axis of hand
-            physics.data.qpos[-6:-3] = self.reference_motion._reference_motion['object_translation'][self._step_count-1]
+            physics.data.qpos[-6:-3] = self.reference_motion._reference_motion['object_translation'][self._step_count-1]  # x,y,z
             eular = quat2euler(self.reference_motion._reference_motion['object_orientation'][self._step_count-1])
             physics.data.qpos[-3:] = eular
 
