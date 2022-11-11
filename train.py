@@ -51,14 +51,13 @@ def train(cfg: DictConfig):
             defaults = HydraConfig.get().runtime.choices
             params = yaml.safe_load(cfg_yaml)
             params['defaults'] = {k: defaults[k] for k in ('agent', 'env')}
-
             run = create_wandb_run(cfg.wandb, params)
             save_dict = dict(wandb_id=run.id, params=params)
             yaml.dump(save_dict, open('exp_config.yaml', 'w'))
             print('Config:')
             print(cfg_yaml)
-        cfg['env']['task_kwargs']['ref_only'] = False
-        cfg['env']['task_kwargs']['auto_ref'] = True
+        # cfg['env']['task_kwargs']['ref_only'] = False  # not sure how to set here
+        # cfg['env']['task_kwargs']['auto_ref'] = True
         if cfg.agent.name == 'PPO':
             trainers.ppo_trainer(cfg, resume_model)
         else:
