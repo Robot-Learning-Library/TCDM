@@ -28,7 +28,7 @@ def ppo_trainer(config, resume_model=None):
         model = PPO.load(resume_model, env)
         model._last_obs = None
         reset_num_timesteps = False
-        total_timesteps -= model.num_timesteps
+        # total_timesteps -= model.num_timesteps  # this line only runs the remaining steps from the checkpoint
         if total_timesteps <= 0:
             return model
     else:
