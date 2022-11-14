@@ -1,0 +1,25 @@
+{
+    "os": "Linux-5.4.0-125-generic-x86_64-with-glibc2.10",
+    "python": "3.8.10",
+    "heartbeatAt": "2022-11-12T18:08:44.415554",
+    "startedAt": "2022-11-12T18:08:44.006177",
+    "docker": null,
+    "gpu": "NVIDIA TITAN RTX",
+    "gpu_count": 2,
+    "cpu_count": 32,
+    "cuda": "11.0.207",
+    "args": [
+        "env.name=mug-drink3"
+    ],
+    "state": "running",
+    "program": "train.py",
+    "git": {
+        "remote": "https://quantumiracle:@github.com/Robot-Learning-Library/TCDM.git",
+        "commit": "c128523134be8542589d4170b15780f8fa01b57c"
+    },
+    "email": "zhding@mail.ustc.edu.cn",
+    "root": "/home/zihan/research/TCDM",
+    "host": "e900-rbtg",
+    "username": "zihan",
+    "executable": "/home/zihan/anaconda3/envs/tcdm/bin/python"
+}
