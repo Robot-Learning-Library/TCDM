@@ -59,6 +59,7 @@ def train(cfg: DictConfig):
         # cfg['env']['task_kwargs']['ref_only'] = False  # not sure how to set here
         # cfg['env']['task_kwargs']['auto_ref'] = True
         if cfg.agent.name == 'PPO':
+            print(resume_model)
             trainers.ppo_trainer(cfg, resume_model)
         else:
             raise NotImplementedError

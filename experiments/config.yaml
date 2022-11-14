@@ -11,9 +11,9 @@ hydra:
 
 exp_name: MimicTrainer
 id: ${hydra.job.id}
-resume_model: null
-total_timesteps: 500000000  # 50000000
-n_envs: 256
+resume_model: /home/zihan/research/TCDM/outputs/2022-11-12/13-08-42/restore_checkpoint
+total_timesteps: 50000000  # 50000000
+n_envs: 64
 n_eval_envs: 5
 eval_freq: 1000000
 vid_freq: null
