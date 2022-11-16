@@ -34,13 +34,17 @@ def render(writer, physics, AA=2, height=256, width=256):
 def rollout(save_folder, writer):
     # get experiment config
     config =  yaml.safe_load(open(os.path.join(save_folder, 'exp_config.yaml'), 'r'))
-    
+    if config['params'] is not None: # saved config may have one more level
+        config = config['params']
     # build environment and load policy
     o, t = config['env']['name'].split('-')
-    config['env']['task_kwargs']['ref_only'] = True
-    config['env']['task_kwargs']['auto_ref'] = True
+    # config['env']['task_kwargs']['ref_only'] = True
+    # config['env']['task_kwargs']['auto_ref'] = True
     env = suite.load(o, t, config['env']['task_kwargs'], gym_wrap=True)
-    policy = PPO.load(os.path.join(save_folder, 'checkpoint.zip'))
+    try:
+        policy = PPO.load(os.path.join(save_folder, 'checkpoint.zip'))
+    except:
+        policy = PPO.load(os.path.join(save_folder, 'restore_checkpoint'))
 
     # rollout the policy and print total reward
     s, done, total_reward = env.reset(), False, 0

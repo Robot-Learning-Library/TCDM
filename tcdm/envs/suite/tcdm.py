@@ -68,6 +68,7 @@ def _obj_mimic_task_factory(domain_name, name, object_class, robot_class, target
 
         if traj_path is None:
             data_path = traj_abspath(target_path, traj_path='trajectories')
+            # data_path = traj_abspath(target_path, traj_path='trajectories/specified_trajs')
         else:
             data_path = generated_traj_abspath(target_path, traj_path, task_name)
 
