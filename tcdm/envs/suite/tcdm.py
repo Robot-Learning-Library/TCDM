@@ -9,20 +9,21 @@ import numpy as np
 from tcdm.envs import mj_models, traj_abspath, generated_traj_abspath
 from tcdm.envs import asset_abspath
 from dm_control.utils import containers
-from tcdm.envs.control import Environment, ReferenceMotionTask, ObjectOnlyReferenceMotionTask
+from tcdm.envs.control import Environment, ReferenceMotionTask, GeneralReferenceMotionTask
 from tcdm.envs.reference import HandObjectReferenceMotion
 from tcdm.envs.rewards import ObjectMimic
 from tcdm.envs.mujoco import physics_from_mjcf
 
 
-class ObjMimicTask(ObjectOnlyReferenceMotionTask):
+class ObjMimicTask(GeneralReferenceMotionTask):
     def __init__(self, object_name, data_path, reward_kwargs, append_time, 
-                       pregrasp_init_key):
+                       pregrasp_init_key, ref_only=False, auto_ref=False, task_name=None, traj_path=None):
         reference_motion = HandObjectReferenceMotion(object_name, data_path)
         reward_fn = ObjectMimic(**reward_kwargs)
         self._append_time = append_time
-        super().__init__(reference_motion, [reward_fn], pregrasp_init_key)
-    
+        # super().__init__(reference_motion, [reward_fn], pregrasp_init_key)  # for ReferenceMotionTask
+        super().__init__(reference_motion, [reward_fn], pregrasp_init_key, data_path, ref_only, auto_ref, task_name, object_name, traj_path)
+
     def get_observation(self, physics):
         obs = super().get_observation(physics)
         
@@ -49,7 +50,11 @@ class Sim2RealMimicTask(ObjMimicTask):
 
 
 def _obj_mimic_task_factory(domain_name, name, object_class, robot_class, target_path):
-    def task(append_time=True, pregrasp='initialized', reward_kwargs={}, environment_kwargs={}):
+    def task(append_time=True, pregrasp='initialized', ref_only=False, auto_ref=False, traj_path=None, reward_kwargs={}, environment_kwargs={}):
+        """
+        ref_only: only visualize object reference trajectory, the hand is hanging
+        auto_ref: automatically generate reference trajectory at the start of each episode
+        """
         # load target data and construct environment
         object_model = object_class()
         object_name = '{}/object'.format(object_model.mjcf_model.model)
@@ -59,10 +64,14 @@ def _obj_mimic_task_factory(domain_name, name, object_class, robot_class, target
 
         # build task using reference motion data
         task_name = domain_name + '_' + name
-        print('task name:', task_name)
-        # data_path = traj_abspath(target_path)
-        data_path = generated_traj_abspath(target_path, task_name)
-        task = ObjMimicTask(object_name, data_path, reward_kwargs, append_time, pregrasp)
+        # print('task name:', task_name)
+
+        if traj_path is None:
+            data_path = traj_abspath(target_path, traj_path='trajectories')
+        else:
+            data_path = generated_traj_abspath(target_path, traj_path, task_name)
+
+        task = ObjMimicTask(object_name, data_path, reward_kwargs, append_time, pregrasp, ref_only, auto_ref, task_name, traj_path)
 
         # build physics object and create environment
         physics = physics_from_mjcf(env)

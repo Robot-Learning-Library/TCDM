@@ -11,10 +11,10 @@ hydra:
 
 exp_name: MimicTrainer
 id: ${hydra.job.id}
-resume_model: null
-total_timesteps: 50000000
-n_envs: 2
-n_eval_envs: 1
+resume_model: /home/zihan/research/TCDM/outputs/2022-11-12/13-08-42/restore_checkpoint
+total_timesteps: 50000000  # 50000000
+n_envs: 64
+n_eval_envs: 5
 eval_freq: 1000000
 vid_freq: null
 save_freq: 10000000
@@ -27,6 +27,7 @@ checkpoints:
   name_prefix: 'rl_model'
 
 wandb:
-  project: dummy_proj
-  group: ${exp_name}
+  project: PGDM
+  # group: ${exp_name}
+  run_name: ${env.name}_${now:%Y-%m-%d}
   sweep_name_prefix: run
