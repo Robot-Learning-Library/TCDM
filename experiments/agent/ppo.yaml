@@ -15,6 +15,6 @@ policy_kwargs:                                              # Policy parameters 
   net_arch:
     #- pi: [256, 128]
     #  vf: [256, 128]
-    - pi: [512, 256, 128]
-      vf: [512, 256, 128]
+    - pi: [512, 512, 512, 256, 128]
+      vf: [512, 512, 512, 256, 128]
   log_std_init: -1.60

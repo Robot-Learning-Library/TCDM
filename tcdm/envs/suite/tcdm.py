@@ -50,7 +50,7 @@ class Sim2RealMimicTask(ObjMimicTask):
 
 
 def _obj_mimic_task_factory(domain_name, name, object_class, robot_class, target_path):
-    def task(append_time=True, pregrasp='initialized', ref_only=False, auto_ref=True, traj_path=None, reward_kwargs={}, environment_kwargs={}):
+    def task(append_time=True, pregrasp='initialized', ref_only=False, auto_ref=False, traj_path=None, reward_kwargs={}, environment_kwargs={}):
         """
         ref_only: only visualize object reference trajectory, the hand is hanging
         auto_ref: automatically generate reference trajectory at the start of each episode
