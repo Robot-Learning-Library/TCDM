@@ -21,6 +21,11 @@ class HandReferenceMotion(object):
         self._reference_motion =  {k:v for k, v in motion_file.items()}
         self._reference_motion['s_0'] = self._reference_motion['s_0'][()]
 
+    def set_with_given_ref(self, ref):
+        self._reference_motion = ref
+        self._substeps = int(ref['SIM_SUBSTEPS'])                
+        self._data_substeps = ref.get('DATA_SUBSTEPS', self._substeps)              
+
     def reset(self):
         self._step = 0
         return copy.deepcopy(self._reference_motion['s_0'])
@@ -176,3 +181,55 @@ class HandObjectReferenceMotion(HandReferenceMotion):
             for k in ('object_orientation', 'object_translation'):
                 g.append(self._reference_motion[k][i].flatten())
         return np.concatenate(g)
+
+import scipy.interpolate as interpolate
+# this is a valid operation range for object on table
+OBJ_X_RANGE = [-0.3, 0.3]
+OBJ_Y_RANGE = [-0.1, 0.5]
+OBJ_Z_RANGE = [-0.1, 0.5]
+OBJ_QUAT_RANGE = [-1., 1]
+OBJ_TRANS_RANGE = [OBJ_X_RANGE, OBJ_Y_RANGE, OBJ_Z_RANGE]
+
+def interpolate_data(data, range=None, initial_point=None, random_sample=3): # random_sample is the number of random middle points
+    if range is None:
+        points = np.random.uniform(np.min(data), np.max(data), size=random_sample)
+    else:
+        points = np.random.uniform(*range, size=random_sample)
+
+    if initial_point is not None: # set the same initial point as original traj
+        points[0] = initial_point
+    else:
+        points[0] = data[0]
+    len_points = points.shape[0]
+    f = interpolate.interp1d(np.arange(len_points), points, kind='quadratic', fill_value="extrapolate")  # ‘linear’, ‘nearest’, ‘nearest-up’, ‘zero’, ‘slinear’, ‘quadratic’, ‘cubic’, ‘previous’, or ‘next’. 
+
+    x_new = np.arange(0, len_points-1, (len_points-1)/data.shape[0])
+    y_new = f(x_new)
+    y_new[-1] = points[-1]
+    return y_new
+
+def random_generate_ref(original_ref):
+    trans_data = original_ref['object_translation']
+    ori_data = original_ref['object_orientation']
+
+    new_trans_data = []
+    for i, d in enumerate(trans_data.T):
+        if original_ref['s_0']['motion_planned']['position'].shape[0] == 36: # 30 hand + 3 pos + 3 ori of object
+            initial_point = original_ref['s_0']['motion_planned']['position'][30+i] # set the original position as initial sampled point position
+        else:
+            initial_point = None
+        new_trans_data.append(interpolate_data(d, OBJ_TRANS_RANGE[i], initial_point=initial_point))
+    new_trans_data = np.array(new_trans_data).T
+
+    new_ori_data = []
+    for d in ori_data.T:
+        new_ori_data.append(interpolate_data(d, OBJ_QUAT_RANGE))
+    new_ori_data = np.array(new_ori_data).T
+
+    new_traj = copy.copy(dict(original_ref))
+
+    new_traj['object_translation'] = new_trans_data
+    new_traj['object_orientation'] = new_ori_data
+    new_traj['SIM_SUBSTEPS'] = 3 # to adapt to current simulator
+
+    return new_traj

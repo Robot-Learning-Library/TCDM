@@ -22,11 +22,12 @@ def create_wandb_run(wandb_cfg, job_config, run_id=None):
     return wandb.init(
                         project=wandb_cfg.project,
                         config=job_config,
-                        group=wandb_cfg.group,
+                        # group=wandb_cfg.group,
                         sync_tensorboard=True, 
                         monitor_gym=True,
                         save_code=True,
-                        name=name,
+                        # name=name,
+                        name=wandb_cfg.run_name,
                         notes=notes,
                         id=run_id,
                         resume=run_id is not None
@@ -50,14 +51,15 @@ def train(cfg: DictConfig):
             defaults = HydraConfig.get().runtime.choices
             params = yaml.safe_load(cfg_yaml)
             params['defaults'] = {k: defaults[k] for k in ('agent', 'env')}
-
             run = create_wandb_run(cfg.wandb, params)
             save_dict = dict(wandb_id=run.id, params=params)
             yaml.dump(save_dict, open('exp_config.yaml', 'w'))
             print('Config:')
             print(cfg_yaml)
-        
+        # cfg['env']['task_kwargs']['ref_only'] = False  # not sure how to set here
+        # cfg['env']['task_kwargs']['auto_ref'] = True
         if cfg.agent.name == 'PPO':
+            print(resume_model)
             trainers.ppo_trainer(cfg, resume_model)
         else:
             raise NotImplementedError
