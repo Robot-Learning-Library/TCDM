@@ -185,7 +185,8 @@ class HandObjectReferenceMotion(HandReferenceMotion):
 import scipy.interpolate as interpolate
 # this is a valid operation range for object on table
 OBJ_X_RANGE = [-0.3, 0.3]
-OBJ_Y_RANGE = [-0.1, 0.5]
+# OBJ_Y_RANGE = [-0.1, 0.5]
+OBJ_Y_RANGE = [-0.3, 0.3]
 OBJ_Z_RANGE = [-0.1, 0.5]
 OBJ_QUAT_RANGE = [-1., 1]
 OBJ_TRANS_RANGE = [OBJ_X_RANGE, OBJ_Y_RANGE, OBJ_Z_RANGE]
