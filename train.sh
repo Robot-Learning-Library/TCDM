@@ -3,7 +3,9 @@ echo "Save as: " $DATE
 
 # declare -a tasks=('cup-pour1')
 
-declare -a tasks=('banana-pass1' 'toothbrush-lift') 
+#declare -a tasks=('toothpaste-lift') 
+
+declare -a tasks=('mug-drink3' 'toothpaste-lift')
 
 mkdir -p log/$DATE
 for i in ${!tasks[@]}; do
