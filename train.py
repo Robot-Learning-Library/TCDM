@@ -51,7 +51,6 @@ def train(cfg: DictConfig):
             defaults = HydraConfig.get().runtime.choices
             params = yaml.safe_load(cfg_yaml)
             params['defaults'] = {k: defaults[k] for k in ('agent', 'env')}
-
             run = create_wandb_run(cfg.wandb, params)
             save_dict = dict(wandb_id=run.id, params=params)
             yaml.dump(save_dict, open('exp_config.yaml', 'w'))
@@ -60,6 +59,7 @@ def train(cfg: DictConfig):
         cfg.env.task_kwargs.ref_only = False
         cfg['env']['task_kwargs']['auto_ref'] = True
         if cfg.agent.name == 'PPO':
+            print(resume_model)
             trainers.ppo_trainer(cfg, resume_model)
         else:
             raise NotImplementedError

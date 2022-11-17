@@ -1,0 +1,74 @@
+params:
+  agent:
+    multi_proc: true
+    name: PPO
+    params:
+      batch_size: 256
+      clip_range: 0.2
+      ent_coef: 0.001
+      gae_lambda: 0.95
+      gamma: 0.95
+      learning_rate: 1.0e-05
+      n_epochs: 5
+      n_steps: 4096
+      vf_coef: 0.5
+      warm_start_mean: true
+    policy_kwargs:
+      log_std_init: -1.6
+      net_arch:
+      - pi:
+        - 512
+        - 256
+        - 128
+        vf:
+        - 512
+        - 256
+        - 128
+  checkpoints:
+    name_prefix: rl_model
+    save_freq: 4000000
+    save_path: ./models/
+  defaults:
+    agent: ppo
+    env: pgdm
+  env:
+    env_kwargs: {}
+    info_keywords:
+    - obj_err
+    - obj_success
+    - step_obj_err
+    - time_frac
+    - obj_err_scale
+    n_envs: ${n_envs}
+    name: mug-drink3
+    state_keyword: state
+    task_kwargs:
+      append_time: true
+      pregrasp: motion_planned
+      reward_kwargs:
+        lift_bonus_mag: 2.5
+        lift_bonus_thresh: 0.02
+        n_envs: ${n_envs}
+        obj_com_term: 0.25
+        obj_err_scale: 50
+        obj_reward_ramp: 0
+        obj_reward_start: 0
+        object_reward_scale: 10.0
+    vid_freq: ${vid_freq}
+    vid_length: 100
+  eval_freq: 1000000
+  exp_name: MimicTrainer
+  id: ${hydra.job.id}
+  n_envs: 64
+  n_eval_envs: 5
+  restore_checkpoint_freq: 500000
+  resume_model: null
+  save_freq: 10000000
+  seed: 0
+  total_timesteps: 50000000
+  vid_freq: null
+  wandb:
+    project: PGDM
+    run_name: ${env.name}_${now:%Y-%m-%d}
+    sweep_name_prefix: run
+wandb_id: 22sj3tjf
