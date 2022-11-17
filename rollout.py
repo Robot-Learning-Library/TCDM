@@ -11,7 +11,7 @@ import glob, yaml, os, imageio, cv2, shutil
 from tcdm import suite
 from stable_baselines3 import PPO
 from argparse import ArgumentParser
-
+import pandas as pd
 
 """
 PLEASE DOWNLOAD AND UNZIP THE PRE-TRAINED AGENTS BEFORE RUNNING THIS
@@ -45,16 +45,19 @@ def rollout(save_folder, writer):
         policy = PPO.load(os.path.join(save_folder, 'checkpoint.zip'))
     except:
         policy = PPO.load(os.path.join(save_folder, 'restore_checkpoint'))
-
+    log = []
     # rollout the policy and print total reward
     s, done, total_reward = env.reset(), False, 0
     render(writer, env.wrapped.physics)
     while not done:
+        log.append(s['state'])
         action, _ = policy.predict(s['state'], deterministic=True)
         s, r, done, __ = env.step(action)
         render(writer, env.wrapped.physics)
         total_reward += r
     print('Total reward:', total_reward)
+    df = pd.DataFrame(log)
+    df.to_csv(f's.csv', index=False, header=True)
 
 
 if __name__ == "__main__":

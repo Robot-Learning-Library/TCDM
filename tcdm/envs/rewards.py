@@ -166,6 +166,7 @@ class ObjectMimic(RewardFunction):
         # terminate if object delta greater than threshold
         tgt_obj_com = self._reference_motion.object_pos
         obj_com = physics.named.data.xipos[self._object_name].copy()
+        print('dis: ', norm2(obj_com - tgt_obj_com))
         return norm2(obj_com - tgt_obj_com) >= self.obj_com_term ** 2
 
     def _object_reward_scale(self):
