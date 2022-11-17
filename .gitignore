@@ -19,3 +19,4 @@ pretrained_agents/*
 *.npz
 log/*
 *.zip
+*.csv
