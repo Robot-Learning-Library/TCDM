@@ -11,7 +11,7 @@ import glob, yaml, os, imageio, cv2, shutil
 from tcdm import suite
 from stable_baselines3 import PPO
 from argparse import ArgumentParser
-
+import pandas as pd
 
 """
 PLEASE DOWNLOAD AND UNZIP THE PRE-TRAINED AGENTS BEFORE RUNNING THIS
@@ -34,23 +34,30 @@ def render(writer, physics, AA=2, height=256, width=256):
 def rollout(save_folder, writer):
     # get experiment config
     config =  yaml.safe_load(open(os.path.join(save_folder, 'exp_config.yaml'), 'r'))
-    
+    if config['params'] is not None: # saved config may have one more level
+        config = config['params']
     # build environment and load policy
     o, t = config['env']['name'].split('-')
-    config['env']['task_kwargs']['ref_only'] = True
-    config['env']['task_kwargs']['auto_ref'] = True
+    # config['env']['task_kwargs']['ref_only'] = True
+    # config['env']['task_kwargs']['auto_ref'] = True
     env = suite.load(o, t, config['env']['task_kwargs'], gym_wrap=True)
-    policy = PPO.load(os.path.join(save_folder, 'checkpoint.zip'))
-
+    try:
+        policy = PPO.load(os.path.join(save_folder, 'checkpoint.zip'))
+    except:
+        policy = PPO.load(os.path.join(save_folder, 'restore_checkpoint'))
+    log = []
     # rollout the policy and print total reward
     s, done, total_reward = env.reset(), False, 0
     render(writer, env.wrapped.physics)
     while not done:
+        log.append(s['state'])
         action, _ = policy.predict(s['state'], deterministic=True)
         s, r, done, __ = env.step(action)
         render(writer, env.wrapped.physics)
         total_reward += r
     print('Total reward:', total_reward)
+    df = pd.DataFrame(log)
+    df.to_csv(f's.csv', index=False, header=True)
 
 
 if __name__ == "__main__":
