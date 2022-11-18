@@ -6,13 +6,17 @@
 
 from tcdm.envs.wrappers import GymWrapper
 from tcdm.envs.suite.tcdm import TCDM_DOMAINS
+from tcdm.envs.suite.tcdm_obj_only import TCDM_DOMAINS_OBJ_ONLY
 
 
-# Find all domains imported.
-_DOMAINS = TCDM_DOMAINS
 
 
-def load(domain_name, task_name, task_kwargs=None, environment_kwargs=None, gym_wrap=False):
+def load(domain_name, task_name, task_kwargs=None, environment_kwargs=None, gym_wrap=False, obj_only=False):
+    if obj_only:
+        _DOMAINS = TCDM_DOMAINS_OBJ_ONLY
+    else:
+        _DOMAINS = TCDM_DOMAINS
+
     if domain_name not in _DOMAINS:
         raise ValueError("Domain {} does not exist!".format(domain_name))
 
