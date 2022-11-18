@@ -223,7 +223,6 @@ class GeneralReferenceMotionTask(SingleObjectTask):
         # super().__init__(reference_motion, reward_fns, init_key, reward_weights, random)
         self.reference_motion =reference_motion
         self.offset = self.reference_motion._reference_motion['offset']
-        self.offset[0] = 2*self.offset[0]
         self._init_key = init_key
         object_name = reference_motion.object_name
         super().__init__(object_name, reward_fns, reward_weights, random)
@@ -250,10 +249,11 @@ class GeneralReferenceMotionTask(SingleObjectTask):
         # else:
         #     # offset = [0.4, 0, 0]
         #     offset = [0., 0.4, 0]
+        print(self.offset)
         base_pos = copy.deepcopy(base_pos)
         # obj in global frame
         base_pos[30:33] -= self.offset 
-        # hand
+        # hand in hand base frame (-x, z, y) to global (x, y, z)
         base_pos[0] += self.offset[0]
         base_pos[1] -= self.offset[2]
         base_pos[2] -= self.offset[1]
@@ -292,7 +292,7 @@ class GeneralReferenceMotionTask(SingleObjectTask):
         print('obs', obs['state'][30])
 
         obs['goal'] = self.reference_motion.goals.astype(np.float32)
-        # offset = [0.8, 0, 0]
+        # handle the offset
         obs['goal'][4::7] -= self.offset[0]  # shape (7,3), 7=4(oritentation)+3(position), 3=(1,5,10)
         obs['goal'][5::7] -= self.offset[1]
         obs['goal'][6::7] -= self.offset[2]
@@ -327,7 +327,7 @@ class GeneralReferenceMotionTask(SingleObjectTask):
 
     @property
     def substeps(self):
-        # print('substeps: ', self.reference_motion.substeps)
+        print('substeps: ', self.reference_motion.substeps)
         if self.ref_only and self.reference_motion.substeps == 10:
             substeps = int(self.reference_motion.substeps / 3) # the above substeps does not replicate the reference
         else:
@@ -338,17 +338,6 @@ class GeneralReferenceMotionTask(SingleObjectTask):
         if self.reference_motion.next_done:
             return 0.0
         return super().get_termination(physics)
-
-    # def get_observation(self, physics):
-    #     obs = super().get_observation(physics)
-    #     obs['goal'] = self.reference_motion.goals.astype(np.float32)
-    #     # offset = [0.8, 0, 0]
-    #     obs['goal'][4::7] -= self.offset[0]  # shape (7,3), 7=4(oritentation)+3(position), 3=(1,5,10)
-    #     obs['goal'][5::7] -= self.offset[1]
-    #     obs['goal'][6::7] -= self.offset[2]
-    #     print(obs['goal'].shape, obs['goal'])
-    #     obs['state'] = np.concatenate((obs['state'], obs['goal']))
-    #     return obs  
 
 
 _FLOAT_EPS = np.finfo(np.float64).eps
