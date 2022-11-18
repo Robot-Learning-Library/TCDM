@@ -220,9 +220,11 @@ class GeneralReferenceMotionTask(SingleObjectTask):
         self.task_name = task_name
         if self.auto_ref:
             reference_motion = self._generate_reference_motion(object_name)
-        # super().__init__(reference_motion, reward_fns, init_key, reward_weights, random)
         self.reference_motion =reference_motion
-        self.offset = self.reference_motion._reference_motion['offset']
+        if 'initial_translation_offset' in self.reference_motion._reference_motion:
+            self.offset = self.reference_motion._reference_motion['initial_translation_offset']
+        else:
+            self.offset = np.zeros(3)
         self._init_key = init_key
         object_name = reference_motion.object_name
         super().__init__(object_name, reward_fns, reward_weights, random)
@@ -243,29 +245,19 @@ class GeneralReferenceMotionTask(SingleObjectTask):
         base_pos = obs['position']
         base_vel = obs['velocity']
 
-        # if base_pos[0] != 0:
-        #     # offset = [0.8, 0, 0]
-        #     offset = [0., 0.4, 0]
-        # else:
-        #     # offset = [0.4, 0, 0]
-        #     offset = [0., 0.4, 0]
-        print(self.offset)
         base_pos = copy.deepcopy(base_pos)
         # obj in global frame
         base_pos[30:33] -= self.offset 
-        # hand in hand base frame (-x, z, y) to global (x, y, z)
+        # hand in initial fixed hand base frame (-x, z, y) to global (x, y, z)
         base_pos[0] += self.offset[0]
         base_pos[1] -= self.offset[2]
         base_pos[2] -= self.offset[1]
-        # print('base: ', base_pos)
 
         hand_poses = physics.body_poses
-        # hand_poses.pos[:, 0] += self.offset
         pose = copy.deepcopy(hand_poses.pos)
-        pose[:] -= self.offset  # global frame (16, 3)
-        # print('hand_pose: ', pose)
-        hand_com = pose.reshape((-1, 3))
-        # hand_com = hand_poses.pos.reshape((-1, 3))
+        pose[:] -= self.offset  # frames on hand to global frame, shape: (16, 3)
+
+        hand_com = pose.reshape((-1, 3)) # com for center of mass
         hand_rot = hand_poses.rot.reshape((-1, 4))
         hand_lv = hand_poses.linear_vel.reshape((-1, 3))
         hand_av = hand_poses.angular_vel.reshape((-1, 3))
@@ -273,8 +265,8 @@ class GeneralReferenceMotionTask(SingleObjectTask):
 
         object_name = self.object_name
         obj_com = physics.named.data.xipos[object_name].copy()
-        obj_com -= self.offset # global frame (3)
-        # print('obj: ', obj_com, base_pos[30:33])
+        obj_com -= self.offset # object frame in global frame, shape: (3)
+
         obj_rot = physics.named.data.xquat[object_name].copy()
         obj_vel = physics.data.object_velocity(object_name, 'body')
         obj_vel = obj_vel.reshape((1, 6))
@@ -289,14 +281,12 @@ class GeneralReferenceMotionTask(SingleObjectTask):
                                           full_vel.reshape(-1))).astype(np.float32)
         obs['state'] = np.concatenate((obs['position'], obs['velocity']))
 
-        print('obs', obs['state'][30])
-
         obs['goal'] = self.reference_motion.goals.astype(np.float32)
         # handle the offset
-        obs['goal'][4::7] -= self.offset[0]  # shape (7,3), 7=4(oritentation)+3(position), 3=(1,5,10)
+        obs['goal'][4::7] -= self.offset[0]  # shape (7,3), 7=4(oritentation)+3(position), 3=future goal position at time +(1,5,10)
         obs['goal'][5::7] -= self.offset[1]
         obs['goal'][6::7] -= self.offset[2]
-        print(obs['goal'].shape, obs['goal'])
+
         obs['state'] = np.concatenate((obs['state'], obs['goal']))
         return obs
 
@@ -327,7 +317,7 @@ class GeneralReferenceMotionTask(SingleObjectTask):
 
     @property
     def substeps(self):
-        print('substeps: ', self.reference_motion.substeps)
+        # print('substeps: ', self.reference_motion.substeps)
         if self.ref_only and self.reference_motion.substeps == 10:
             substeps = int(self.reference_motion.substeps / 3) # the above substeps does not replicate the reference
         else:
