@@ -45,23 +45,26 @@ def rollout(save_folder, writer):
         policy = PPO.load(os.path.join(save_folder, 'checkpoint.zip'))
     except:
         policy = PPO.load(os.path.join(save_folder, 'restore_checkpoint'))
-    log = []
-    log2 = []
+    
+    log = False
+    logger = {'s': [], 'a':[]}
     # rollout the policy and print total reward
     s, done, total_reward = env.reset(), False, 0
     render(writer, env.wrapped.physics)
     while not done:
-        log.append(s['state'])
         action, _ = policy.predict(s['state'], deterministic=True)
         s, r, done, __ = env.step(action)
         render(writer, env.wrapped.physics)
         total_reward += r
-        log2.append(action)
+        if log:
+            logger['s'].append(s['state'])
+            logger['a'].append(action)
     print('Total reward:', total_reward)
-    df = pd.DataFrame(log)
-    df.to_csv(f's.csv', index=False, header=True)
-    df = pd.DataFrame(log2)
-    df.to_csv(f'a.csv', index=False, header=True)
+    if log:
+        df = pd.DataFrame(logger['s'])
+        df.to_csv(f's.csv', index=False, header=True)
+        df = pd.DataFrame(logger['a'])
+        df.to_csv(f'a.csv', index=False, header=True)
 
 
 if __name__ == "__main__":
