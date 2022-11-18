@@ -34,7 +34,7 @@ def render(writer, physics, AA=2, height=256, width=256):
 def rollout(save_folder, writer):
     # get experiment config
     config =  yaml.safe_load(open(os.path.join(save_folder, 'exp_config.yaml'), 'r'))
-    if config['params'] is not None: # saved config may have one more level
+    if 'params' in config: # saved config may have one more level
         config = config['params']
     # build environment and load policy
     o, t = config['env']['name'].split('-')
@@ -46,6 +46,7 @@ def rollout(save_folder, writer):
     except:
         policy = PPO.load(os.path.join(save_folder, 'restore_checkpoint'))
     log = []
+    log2 = []
     # rollout the policy and print total reward
     s, done, total_reward = env.reset(), False, 0
     render(writer, env.wrapped.physics)
@@ -55,9 +56,12 @@ def rollout(save_folder, writer):
         s, r, done, __ = env.step(action)
         render(writer, env.wrapped.physics)
         total_reward += r
+        log2.append(action)
     print('Total reward:', total_reward)
     df = pd.DataFrame(log)
     df.to_csv(f's.csv', index=False, header=True)
+    df = pd.DataFrame(log2)
+    df.to_csv(f'a.csv', index=False, header=True)
 
 
 if __name__ == "__main__":
