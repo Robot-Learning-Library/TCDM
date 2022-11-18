@@ -236,7 +236,7 @@ class GeneralReferenceMotionTask(SingleObjectTask):
         else:
             ref_obj = HandObjectReferenceMotion(self.object_name, motion_file)
         ref = ref_obj._reference_motion
-        rand_ref = random_generate_ref(copy.copy(ref))
+        rand_ref = random_generate_ref(copy.copy(ref), 'random')
         ref_obj.set_with_given_ref(rand_ref)
         return ref_obj
 
