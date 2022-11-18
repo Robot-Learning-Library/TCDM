@@ -183,18 +183,21 @@ class HandObjectReferenceMotion(HandReferenceMotion):
         return np.concatenate(g)
 
 import scipy.interpolate as interpolate
-# this is a valid operation range for object on table
+# this is a valid operation range for object on table, global frame, centered at the table center
 OBJ_X_RANGE = [-0.3, 0.3]
-OBJ_Y_RANGE = [-0.1, 0.5]
+# OBJ_Y_RANGE = [-0.1, 0.5]
+OBJ_Y_RANGE = [-0.3, 0.3]
 OBJ_Z_RANGE = [-0.1, 0.5]
 OBJ_QUAT_RANGE = [-1., 1]
 OBJ_TRANS_RANGE = [OBJ_X_RANGE, OBJ_Y_RANGE, OBJ_Z_RANGE]
 
-def interpolate_data(data, range=None, initial_point=None, random_sample=3): # random_sample is the number of random middle points
+def interpolate_data(data, range=None, offset=0, initial_point=None, random_sample=3): # random_sample is the number of random middle points
     if range is None:
         points = np.random.uniform(np.min(data), np.max(data), size=random_sample)
     else:
         points = np.random.uniform(*range, size=random_sample)
+    
+    points += offset
 
     if initial_point is not None: # set the same initial point as original traj
         points[0] = initial_point
@@ -208,9 +211,19 @@ def interpolate_data(data, range=None, initial_point=None, random_sample=3): # r
     y_new[-1] = points[-1]
     return y_new
 
-def random_generate_ref(original_ref):
+def random_generate_ref(original_ref, initial_translation_offset=np.zeros(3)):
     trans_data = original_ref['object_translation']
     ori_data = original_ref['object_orientation']
+
+    if initial_translation_offset == 'random': # random valid translation offset for x and y
+        initial_translation_offset = [np.random.uniform(*OBJ_X_RANGE), np.random.uniform(*OBJ_Y_RANGE), 0]
+
+    if original_ref['s_0']['motion_planned']['position'].shape[0] == 36:
+        # set initial position for object and hand with offset
+        original_ref['s_0']['motion_planned']['position'][30:33] += initial_translation_offset  # obj: (x, y, z)
+        original_ref['s_0']['motion_planned']['position'][0] -= initial_translation_offset[0]  # hand: (-x, z, y)
+        original_ref['s_0']['motion_planned']['position'][1] += initial_translation_offset[2]  # hand: (-x, z, y)
+        original_ref['s_0']['motion_planned']['position'][2] += initial_translation_offset[1]  # hand: (-x, z, y)
 
     new_trans_data = []
     for i, d in enumerate(trans_data.T):
@@ -218,7 +231,7 @@ def random_generate_ref(original_ref):
             initial_point = original_ref['s_0']['motion_planned']['position'][30+i] # set the original position as initial sampled point position
         else:
             initial_point = None
-        new_trans_data.append(interpolate_data(d, OBJ_TRANS_RANGE[i], initial_point=initial_point))
+        new_trans_data.append(interpolate_data(d, OBJ_TRANS_RANGE[i], initial_translation_offset[i], initial_point=initial_point))
     new_trans_data = np.array(new_trans_data).T
 
     new_ori_data = []

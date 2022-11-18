@@ -56,8 +56,8 @@ def train(cfg: DictConfig):
             yaml.dump(save_dict, open('exp_config.yaml', 'w'))
             print('Config:')
             print(cfg_yaml)
-        # cfg['env']['task_kwargs']['ref_only'] = False  # not sure how to set here
-        # cfg['env']['task_kwargs']['auto_ref'] = True
+        cfg.env.task_kwargs.ref_only = False
+        cfg['env']['task_kwargs']['auto_ref'] = True
         if cfg.agent.name == 'PPO':
             print(resume_model)
             trainers.ppo_trainer(cfg, resume_model)

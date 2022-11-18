@@ -210,7 +210,7 @@ class ReferenceMotionTask(SingleObjectTask):
         obs['state'] = np.concatenate((obs['state'], obs['goal']))
         return obs
 
-class GeneralReferenceMotionTask(ReferenceMotionTask):
+class GeneralReferenceMotionTask(SingleObjectTask):
     def __init__(self, reference_motion, reward_fns, init_key, data_path, ref_only, auto_ref, task_name, object_name, traj_path,
                       reward_weights=None, random=None):
         self.data_path = data_path
@@ -220,7 +220,14 @@ class GeneralReferenceMotionTask(ReferenceMotionTask):
         self.task_name = task_name
         if self.auto_ref:
             reference_motion = self._generate_reference_motion(object_name)
-        super().__init__(reference_motion, reward_fns, init_key, reward_weights, random)
+        self.reference_motion =reference_motion
+        if 'initial_translation_offset' in self.reference_motion._reference_motion:
+            self.offset = self.reference_motion._reference_motion['initial_translation_offset']
+        else:
+            self.offset = np.zeros(3)
+        self._init_key = init_key
+        object_name = reference_motion.object_name
+        super().__init__(object_name, reward_fns, reward_weights, random)
 
     def _generate_reference_motion(self, object_name=None):
         motion_file = generated_traj_abspath(self.data_path, self.traj_path, self.task_name)
@@ -233,6 +240,56 @@ class GeneralReferenceMotionTask(ReferenceMotionTask):
         ref_obj.set_with_given_ref(rand_ref)
         return ref_obj
 
+    def get_observation(self, physics):
+        obs = Task.get_observation(self, physics)
+        base_pos = obs['position']
+        base_vel = obs['velocity']
+
+        base_pos = copy.deepcopy(base_pos)
+        # obj in global frame
+        base_pos[30:33] -= self.offset 
+        # hand in initial fixed hand base frame (-x, z, y) to global (x, y, z)
+        base_pos[0] += self.offset[0]
+        base_pos[1] -= self.offset[2]
+        base_pos[2] -= self.offset[1]
+
+        hand_poses = physics.body_poses
+        pose = copy.deepcopy(hand_poses.pos)
+        pose[:] -= self.offset  # frames on hand to global frame, shape: (16, 3)
+
+        hand_com = pose.reshape((-1, 3)) # com for center of mass
+        hand_rot = hand_poses.rot.reshape((-1, 4))
+        hand_lv = hand_poses.linear_vel.reshape((-1, 3))
+        hand_av = hand_poses.angular_vel.reshape((-1, 3))
+        hand_vel = np.concatenate((hand_lv, hand_av), 1)
+
+        object_name = self.object_name
+        obj_com = physics.named.data.xipos[object_name].copy()
+        obj_com -= self.offset # object frame in global frame, shape: (3)
+
+        obj_rot = physics.named.data.xquat[object_name].copy()
+        obj_vel = physics.data.object_velocity(object_name, 'body')
+        obj_vel = obj_vel.reshape((1, 6))
+        
+        full_com = np.concatenate((hand_com, obj_com.reshape((1,3))), 0)
+        full_rot = np.concatenate((hand_rot, obj_rot.reshape((1,4))), 0)
+        full_vel = np.concatenate((hand_vel, obj_vel), 0)
+
+        obs['position'] = np.concatenate((base_pos, full_com.reshape(-1), 
+                                          full_rot.reshape(-1))).astype(np.float32)
+        obs['velocity'] = np.concatenate((base_vel, 
+                                          full_vel.reshape(-1))).astype(np.float32)
+        obs['state'] = np.concatenate((obs['position'], obs['velocity']))
+
+        obs['goal'] = self.reference_motion.goals.astype(np.float32)
+        # handle the offset
+        obs['goal'][4::7] -= self.offset[0]  # shape (7,3), 7=4(oritentation)+3(position), 3=future goal position at time +(1,5,10)
+        obs['goal'][5::7] -= self.offset[1]
+        obs['goal'][6::7] -= self.offset[2]
+
+        obs['state'] = np.concatenate((obs['state'], obs['goal']))
+        return obs
+
     def initialize_episode(self, physics):
         if self.auto_ref:
             new_ref = self._generate_reference_motion()
@@ -243,6 +300,10 @@ class GeneralReferenceMotionTask(ReferenceMotionTask):
             physics.data.qpos[:] = start_state['position']
             physics.data.qvel[:] = start_state['velocity']
         return super().initialize_episode(physics)
+
+    def before_step(self, action, physics):
+        super().before_step(action, physics)
+        self.reference_motion.step()
 
     def after_step(self, physics):
         super().after_step(physics)
@@ -263,7 +324,10 @@ class GeneralReferenceMotionTask(ReferenceMotionTask):
             substeps = self.reference_motion.substeps
         return substeps
 
-        
+    def get_termination(self, physics):
+        if self.reference_motion.next_done:
+            return 0.0
+        return super().get_termination(physics)
 
 
 _FLOAT_EPS = np.finfo(np.float64).eps

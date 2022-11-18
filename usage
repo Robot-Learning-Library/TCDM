@@ -1,0 +1,1 @@
+python rollout.py --save_folder outputs/2022-11-06/12-00-55  --render
