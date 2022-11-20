@@ -7,7 +7,7 @@
 import numpy as np
 import copy, collections
 from dm_env import specs
-from dm_control.rl import control
+from dm_control.rl import control # https://github.com/deepmind/dm_control/blob/main/dm_control/rl/control.py
 from tcdm.envs.reference import HandObjectReferenceMotion, random_generate_ref
 from tcdm.envs import generated_traj_abspath
 
@@ -122,16 +122,18 @@ class Task(control.Task):
 
     def get_reward(self, physics):
         reward = 0
-        for reward_fn, lambda_r in zip(self._reward_fns, self._reward_wgts):
-            r_i, info_i = reward_fn(physics)
-            reward += lambda_r * r_i
-            self._info.update(info_i)
+        if not self.additional_step:
+            for reward_fn, lambda_r in zip(self._reward_fns, self._reward_wgts):
+                r_i, info_i = reward_fn(physics)
+                reward += lambda_r * r_i
+                self._info.update(info_i)
         return reward
 
     def get_termination(self, physics):
-        for reward_fn in self._reward_fns:
-            if reward_fn.check_termination(physics):
-                return 0.0
+        if not self.additional_step:
+            for reward_fn in self._reward_fns:
+                if reward_fn.check_termination(physics):
+                    return 0.0
         return None
 
 
@@ -291,6 +293,8 @@ class GeneralReferenceMotionTask(SingleObjectTask):
         return obs
 
     def initialize_episode(self, physics):
+        self.additional_step_cnt = 0 # step after the reference motion is done
+        self.additional_step = False # whether to step after the reference motion is done
         if self.auto_ref:
             new_ref = self._generate_reference_motion()
             self.reference_motion = new_ref
@@ -303,7 +307,8 @@ class GeneralReferenceMotionTask(SingleObjectTask):
 
     def before_step(self, action, physics):
         super().before_step(action, physics)
-        self.reference_motion.step()
+        if not self.additional_step:
+            self.reference_motion.step()
 
     def after_step(self, physics):
         super().after_step(physics)
@@ -326,7 +331,13 @@ class GeneralReferenceMotionTask(SingleObjectTask):
 
     def get_termination(self, physics):
         if self.reference_motion.next_done:
-            return 0.0
+            physics.data.qpos[6:30] = self.start_state['position'][6:30]
+            self.additional_step_cnt +=1 
+            self.additional_step = True
+            if self.additional_step_cnt > 30:
+                return 0.0
+            else:
+                None
         return super().get_termination(physics)
 
 

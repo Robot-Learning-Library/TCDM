@@ -24,7 +24,7 @@ parser.add_argument('--save_folder', default='pretrained_agents/hammer_use1/',
 parser.add_argument('--render', action="store_true", help="Supply flag to render mp4")
 
 
-def render(writer, physics, AA=2, height=256, width=256):
+def render(writer, physics, AA=2, height=768, width=768):
     if writer is None:
         return
     img = physics.render(camera_id=0, height=height * AA, width=width * AA)
@@ -40,6 +40,7 @@ def rollout(save_folder, writer):
     o, t = config['env']['name'].split('-')
     # config['env']['task_kwargs']['ref_only'] = True
     # config['env']['task_kwargs']['auto_ref'] = True
+    config['env']['task_kwargs']['traj_path'] = 'trajectories/specified_trajs'
     env = suite.load(o, t, config['env']['task_kwargs'], gym_wrap=True)
     try:
         policy = PPO.load(os.path.join(save_folder, 'checkpoint.zip'))
