@@ -24,7 +24,8 @@ parser.add_argument('--save_folder', default='pretrained_agents/hammer_use1/',
 parser.add_argument('--render', action="store_true", help="Supply flag to render mp4")
 
 
-def render(writer, physics, AA=2, height=768, width=768):
+# def render(writer, physics, AA=2, height=768, width=768):
+def render(writer, physics, AA=2, height=512, width=512):
     if writer is None:
         return
     img = physics.render(camera_id=0, height=height * AA, width=width * AA)
