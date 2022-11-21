@@ -14,7 +14,7 @@ from tcdm.motion_util import PoseAndVelocity
 ROBOT_CONFIGS = yaml.safe_load(open(asset_abspath('robot_config.yaml'), 'r'))
 
 
-def physics_from_mjcf(env, robot_name=None):
+def physics_from_mjcf(env, robot_name=None, gravity_compensation_for_all=False):
     mjcf_model = env.mjcf_model
     if robot_name is None:
         xml = mjcf_model.to_xml_string()
@@ -30,7 +30,10 @@ def physics_from_mjcf(env, robot_name=None):
             raise NotImplementedError
     
     if robot_name == 'adroit':
-        return AdroitPhysics.from_mjcf_model(mjcf_model)
+        # return AdroitPhysics.from_mjcf_model(mjcf_model)
+        physics = AdroitPhysics
+        physics.set_gravity(gravity_compensation_for_all)
+        return physics.from_mjcf_model(mjcf_model)
     elif robot_name == 'dhand':
         return DHandPhysics.from_mjcf_model(mjcf_model)
     elif robot_name == 'dmanus':
@@ -74,11 +77,20 @@ class _Physics(mjcf.Physics):
                 num += 1
         return num
 
+    def set_gravity(self, gravity_compensation_for_all):
+        self.gravity_compensation_for_all = gravity_compensation_for_all
+
     def set_control(self, action):
         super().set_control(action)
-        # applies gravity compensation to robot joints
-        grav_comp = self.named.data.qfrc_bias[:self.adim]
-        self.named.data.qfrc_applied[:self.adim] = grav_comp
+
+        if self.gravity_compensation_for_all:
+            # compensating for gravity on objects and robot joints
+            grav_comp = self.named.data.qfrc_bias[:]
+            self.named.data.qfrc_applied[:] = grav_comp
+        else:
+            # applies gravity compensation to robot joints
+            grav_comp = self.named.data.qfrc_bias[:self.adim]
+            self.named.data.qfrc_applied[:self.adim] = grav_comp
 
     @property
     def adim(self):
