@@ -14,7 +14,7 @@ from tcdm.motion_util import PoseAndVelocity
 ROBOT_CONFIGS = yaml.safe_load(open(asset_abspath('robot_config.yaml'), 'r'))
 
 
-def physics_from_mjcf(env, robot_name=None):
+def physics_from_mjcf(env, robot_name=None, gravity_compensation_for_all=False):
     mjcf_model = env.mjcf_model
     if robot_name is None:
         xml = mjcf_model.to_xml_string()
@@ -30,7 +30,10 @@ def physics_from_mjcf(env, robot_name=None):
             raise NotImplementedError
     
     if robot_name == 'adroit':
-        return AdroitPhysics.from_mjcf_model(mjcf_model)
+        if gravity_compensation_for_all:
+            return AdroitPhysicsNoGravity.from_mjcf_model(mjcf_model)
+        else:
+            return AdroitPhysics.from_mjcf_model(mjcf_model)
     elif robot_name == 'dhand':
         return DHandPhysics.from_mjcf_model(mjcf_model)
     elif robot_name == 'dmanus':
@@ -76,6 +79,7 @@ class _Physics(mjcf.Physics):
 
     def set_control(self, action):
         super().set_control(action)
+
         # applies gravity compensation to robot joints
         grav_comp = self.named.data.qfrc_bias[:self.adim]
         self.named.data.qfrc_applied[:self.adim] = grav_comp
@@ -88,9 +92,18 @@ class _Physics(mjcf.Physics):
     def ctrl_range(self):
         return self.model.actuator_ctrlrange
 
-
 class AdroitPhysics(_Physics):
     _ROBOT_NAME = 'adroit'
+
+class AdroitPhysicsNoGravity(_Physics):
+    _ROBOT_NAME = 'adroit'
+
+    def set_control(self, action):
+        super().set_control(action)
+
+        # compensating for gravity on all: objects and robot joints
+        grav_comp = self.named.data.qfrc_bias[:]
+        self.named.data.qfrc_applied[:] = grav_comp
 
 
 class DHandPhysics(_Physics):

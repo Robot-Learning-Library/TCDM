@@ -7,7 +7,7 @@
 import numpy as np
 import copy, collections
 from dm_env import specs
-from dm_control.rl import control
+from dm_control.rl import control # https://github.com/deepmind/dm_control/blob/main/dm_control/rl/control.py
 from tcdm.envs.reference import HandObjectReferenceMotion, random_generate_ref
 from tcdm.envs import generated_traj_abspath
 
@@ -97,6 +97,7 @@ class Task(control.Task):
         """Sets the control signal for the actuators to values in `action`."""
         self._step_count += 1
         action = _denormalize_action(physics, action)
+        # print('action: ',action)
         physics.set_control(action)
 
     def after_step(self, physics):
@@ -122,16 +123,18 @@ class Task(control.Task):
 
     def get_reward(self, physics):
         reward = 0
-        for reward_fn, lambda_r in zip(self._reward_fns, self._reward_wgts):
-            r_i, info_i = reward_fn(physics)
-            reward += lambda_r * r_i
-            self._info.update(info_i)
+        if not self.additional_step:
+            for reward_fn, lambda_r in zip(self._reward_fns, self._reward_wgts):
+                r_i, info_i = reward_fn(physics)
+                reward += lambda_r * r_i
+                self._info.update(info_i)
         return reward
 
     def get_termination(self, physics):
-        for reward_fn in self._reward_fns:
-            if reward_fn.check_termination(physics):
-                return 0.0
+        if not self.additional_step:
+            for reward_fn in self._reward_fns:
+                if reward_fn.check_termination(physics):
+                    return 0.0
         return None
 
 
@@ -248,7 +251,7 @@ class GeneralReferenceMotionTask(SingleObjectTask):
         base_pos = copy.deepcopy(base_pos)
         # obj in global frame
         base_pos[30:33] -= self.offset 
-        # hand in initial fixed hand base frame (-x, z, y) to global (x, y, z)
+        # observation minus offset; hand in initial fixed hand base frame (-x, z, y) to global (x, y, z)
         base_pos[0] += self.offset[0]
         base_pos[1] -= self.offset[2]
         base_pos[2] -= self.offset[1]
@@ -291,6 +294,8 @@ class GeneralReferenceMotionTask(SingleObjectTask):
         return obs
 
     def initialize_episode(self, physics):
+        self.additional_step_cnt = 0 # step after the reference motion is done
+        self.additional_step = False # whether to step after the reference motion is done
         if self.auto_ref:
             new_ref = self._generate_reference_motion()
             self.reference_motion = new_ref
@@ -299,14 +304,35 @@ class GeneralReferenceMotionTask(SingleObjectTask):
         with physics.reset_context():
             physics.data.qpos[:] = start_state['position']
             physics.data.qvel[:] = start_state['velocity']
+        # self.ini_pose = physics.data.qpos[:3].copy()
         return super().initialize_episode(physics)
 
     def before_step(self, action, physics):
+        """
+        action is 30 dimensional: 3 for hand translation, 3 for hand rotation, 24 for joint pose, all abosulte position (not delta)!
+        """
+        # correct hand translation in action  by adding offet
+        denorm_action = _denormalize_action(physics, action)  # since offset is in denormed space (true coordinate)
+        denorm_action[0] -= self.offset[0] # action match with qpos dimension, so frame change from hand base (-x, z, y, for action) to global (x,y,z, for offset)
+        denorm_action[1] += self.offset[2]
+        denorm_action[2] += self.offset[1]
+        action = _normalize_action(physics, denorm_action)
+
+        if self.additional_step: 
+            # physics.data.qvel[:] = 0
+            action = physics.data.qpos[:30].copy()  # 30 dim: 3 for hand translation, 3 for hand rotation, 24 for joint pose
+            action = _normalize_action(physics, action)  # since action will be denormalized later
+        # action = np.zeros_like(action)
+        # action[:3] = self.ini_pose
+        # print('qpos: ', physics.data.qpos[:3] )
+
         super().before_step(action, physics)
-        self.reference_motion.step()
+        if not self.additional_step:
+            self.reference_motion.step()
 
     def after_step(self, physics):
         super().after_step(physics)
+        # print(physics.data.qpos[3:])
         if self.ref_only: # set position of objects (according to reference) and hand (fixed)
             # print(self._step_count)
             physics.data.qpos[:30] = self.start_state['position'][:30]
@@ -314,6 +340,7 @@ class GeneralReferenceMotionTask(SingleObjectTask):
             physics.data.qpos[-6:-3] = self.reference_motion._reference_motion['object_translation'][self._step_count-1]  # x,y,z
             eular = quat2euler(self.reference_motion._reference_motion['object_orientation'][self._step_count-1])
             physics.data.qpos[-3:] = eular
+
 
     @property
     def substeps(self):
@@ -326,7 +353,32 @@ class GeneralReferenceMotionTask(SingleObjectTask):
 
     def get_termination(self, physics):
         if self.reference_motion.next_done:
-            return 0.0
+            # if done, additional steps for openning the hand
+            # this will not affect the reward
+            smooth_loosen_steps = 30
+            self.additional_step_cnt +=1
+            target_hand_pose = np.zeros(24)   # fully open hand pose
+            # target_hand_pose = self.start_state['position'][6:30]  # set hand to initial joint position
+            if self.additional_step_cnt == 1: 
+                self.end_hand_pose = copy.deepcopy(physics.data.qpos[:6])
+                self.end_hand_joint_pose = copy.deepcopy(physics.data.qpos[6:30])
+                self.end_obj_pose = copy.deepcopy(physics.data.qpos[30:])
+
+            # smoothly move to target hand pose (not grasping object)
+            if self.additional_step_cnt <= smooth_loosen_steps:
+                physics.data.qpos[6:30] = self.end_hand_joint_pose + (target_hand_pose - self.end_hand_joint_pose)*self.additional_step_cnt/smooth_loosen_steps  # set hand to initial joint position
+            else:
+                physics.data.qpos[6:30] = target_hand_pose
+
+            # set fixed obj and hand pose
+            # physics.data.qpos[:6] = self.end_hand_pose
+            # physics.data.qpos[30:] = self.end_obj_pose
+
+            self.additional_step = True
+            if self.additional_step_cnt > 150:
+                return 0.0
+            else:
+                None
         return super().get_termination(physics)
 
 
