@@ -30,10 +30,10 @@ def physics_from_mjcf(env, robot_name=None, gravity_compensation_for_all=False):
             raise NotImplementedError
     
     if robot_name == 'adroit':
-        # return AdroitPhysics.from_mjcf_model(mjcf_model)
-        physics = AdroitPhysics
-        physics.set_gravity(gravity_compensation_for_all)
-        return physics.from_mjcf_model(mjcf_model)
+        if gravity_compensation_for_all:
+            return AdroitPhysicsNoGravity.from_mjcf_model(mjcf_model)
+        else:
+            return AdroitPhysics.from_mjcf_model(mjcf_model)
     elif robot_name == 'dhand':
         return DHandPhysics.from_mjcf_model(mjcf_model)
     elif robot_name == 'dmanus':
@@ -77,20 +77,12 @@ class _Physics(mjcf.Physics):
                 num += 1
         return num
 
-    def set_gravity(self, gravity_compensation_for_all):
-        self.gravity_compensation_for_all = gravity_compensation_for_all
-
     def set_control(self, action):
         super().set_control(action)
 
-        if self.gravity_compensation_for_all:
-            # compensating for gravity on objects and robot joints
-            grav_comp = self.named.data.qfrc_bias[:]
-            self.named.data.qfrc_applied[:] = grav_comp
-        else:
-            # applies gravity compensation to robot joints
-            grav_comp = self.named.data.qfrc_bias[:self.adim]
-            self.named.data.qfrc_applied[:self.adim] = grav_comp
+        # applies gravity compensation to robot joints
+        grav_comp = self.named.data.qfrc_bias[:self.adim]
+        self.named.data.qfrc_applied[:self.adim] = grav_comp
 
     @property
     def adim(self):
@@ -100,9 +92,18 @@ class _Physics(mjcf.Physics):
     def ctrl_range(self):
         return self.model.actuator_ctrlrange
 
-
 class AdroitPhysics(_Physics):
     _ROBOT_NAME = 'adroit'
+
+class AdroitPhysicsNoGravity(_Physics):
+    _ROBOT_NAME = 'adroit'
+
+    def set_control(self, action):
+        super().set_control(action)
+
+        # compensating for gravity on all: objects and robot joints
+        grav_comp = self.named.data.qfrc_bias[:]
+        self.named.data.qfrc_applied[:] = grav_comp
 
 
 class DHandPhysics(_Physics):
