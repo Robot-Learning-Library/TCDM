@@ -20,3 +20,4 @@ pretrained_agents/*
 log/*
 *.zip
 *.csv
+outputs/*
