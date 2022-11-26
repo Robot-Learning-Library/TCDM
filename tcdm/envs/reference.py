@@ -184,9 +184,13 @@ class HandObjectReferenceMotion(HandReferenceMotion):
 
 import scipy.interpolate as interpolate
 # this is a valid operation range for object on table, global frame, centered at the table center
-OBJ_X_RANGE = [-0.3, 0.3]
-# OBJ_Y_RANGE = [-0.1, 0.5]
-OBJ_Y_RANGE = [-0.3, 0.3]
+# OBJ_X_RANGE = [-0.3, 0.3]
+# OBJ_Y_RANGE = [-0.3, 0.3]
+# OBJ_Z_RANGE = [-0.1, 0.5]
+# considering the range of robot hand: TCDM/tcdm/envs/assets/robots/adroit/actuators.xml
+# x: [-0.25, 0.25], y: [-0.2, 0.1], z: [-0.3, 0.5]
+OBJ_X_RANGE = [-0.2, 0.2]
+OBJ_Y_RANGE = [-0.1, 0.1]
 OBJ_Z_RANGE = [-0.1, 0.5]
 OBJ_QUAT_RANGE = [-1., 1]
 OBJ_TRANS_RANGE = [OBJ_X_RANGE, OBJ_Y_RANGE, OBJ_Z_RANGE]
@@ -243,6 +247,7 @@ def random_generate_ref(original_ref, initial_translation_offset=np.zeros(3)):
 
     new_traj['object_translation'] = new_trans_data
     new_traj['object_orientation'] = new_ori_data
-    new_traj['SIM_SUBSTEPS'] = 3 # to adapt to current simulator
+    new_traj['SIM_SUBSTEPS'] = 10 # to adapt to current simulator
+    # new_traj['SIM_SUBSTEPS'] = 3 # to adapt to current simulator
 
     return new_traj

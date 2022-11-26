@@ -352,7 +352,13 @@ class GeneralReferenceMotionTask(SingleObjectTask):
         return substeps
 
     def get_termination(self, physics):
-        if self.reference_motion.next_done:
+        # for training
+        # if self.reference_motion.next_done:
+        #     return 0.0
+        # return super().get_termination(physics)
+
+        # after training
+        if not self.ref_only and self.reference_motion.next_done:
             # if done, additional steps for openning the hand
             # this will not affect the reward
             smooth_loosen_steps = 30

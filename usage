@@ -1,2 +1,11 @@
 python rollout.py --save_folder outputs/2022-11-06/12-00-55  --render
 python rollout.py --save_folder outputs/2022-11-18/03-10-51  --render
+
+pretrained mug:
+python rollout.py --save_folder outputs/2022-11-16/19-27-32  --render
+train with pretrained mug:
+python rollout.py --save_folder outputs/2022-11-23/17-30-16  --render
+pretrained cup:
+python rollout.py --save_folder outputs/2022-11-24/21-42-24  --render
+train with pretrained cup:
+python rollout.py --save_folder outputs/2022-11-25/03-45-35  --render

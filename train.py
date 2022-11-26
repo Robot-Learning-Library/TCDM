@@ -57,6 +57,7 @@ def train(cfg: DictConfig):
             print('Config:')
             print(cfg_yaml)
         with open_dict(cfg):    
+            # cfg['env']['task_kwargs']['traj_path'] = 'trajectories/specified_trajs'
             cfg['env']['task_kwargs']['ref_only'] = False
             cfg['env']['task_kwargs']['auto_ref'] = True
         if cfg.agent.name == 'PPO':
