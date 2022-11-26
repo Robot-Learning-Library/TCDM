@@ -28,21 +28,21 @@
             <joint name="OBJRx" pos="0 0 0" axis="1 0 0" class="freejoint" />
             <joint name="OBJRy" pos="0 0 0" axis="0 1 0" class="freejoint" />
             <joint name="OBJRz" pos="0 0 0" axis="0 0 1" class="freejoint" />
-            <geom solref=".004 1" name="mug_visual" class="object_visual" mesh="mug" rgba="0 0 0.7 1.0" />
-            <geom solref=".004 1" name="mug_contact0" class="object_contact" mesh="contact0"  />
-            <geom solref=".004 1" name="mug_contact1" class="object_contact" mesh="contact1"  />
-            <geom solref=".004 1" name="mug_contact2" class="object_contact" mesh="contact2"  />
-            <geom solref=".004 1" name="mug_contact3" class="object_contact" mesh="contact3"  />
-            <geom solref=".004 1" name="mug_contact4" class="object_contact" mesh="contact4"  />
-            <geom solref=".004 1" name="mug_contact5" class="object_contact" mesh="contact5"  />
-            <geom solref=".004 1" name="mug_contact6" class="object_contact" mesh="contact6"  />
-            <geom solref=".004 1" name="mug_contact7" class="object_contact" mesh="contact7"  />
-            <geom solref=".004 1" name="mug_contact8" class="object_contact" mesh="contact8"  />
-            <geom solref=".004 1" name="mug_contact9" class="object_contact" mesh="contact9"  />
-            <geom solref=".004 1" name="mug_contact10" class="object_contact" mesh="contact10"  />
-            <geom solref=".004 1" name="mug_contact11" class="object_contact" mesh="contact11"  />
-            <geom solref=".004 1" name="mug_contact12" class="object_contact" mesh="contact12"  />
-            <geom solref=".004 1" name="mug_contact13" class="object_contact" mesh="contact13"  />
+            <geom solref=".0005 1" name="mug_visual" class="object_visual" mesh="mug" rgba="0 0 0.7 1.0" />
+            <geom solref=".0005 1" name="mug_contact0" class="object_contact" mesh="contact0"  />
+            <geom solref=".0005 1" name="mug_contact1" class="object_contact" mesh="contact1"  />
+            <geom solref=".0005 1" name="mug_contact2" class="object_contact" mesh="contact2"  />
+            <geom solref=".0005 1" name="mug_contact3" class="object_contact" mesh="contact3"  />
+            <geom solref=".0005 1" name="mug_contact4" class="object_contact" mesh="contact4"  />
+            <geom solref=".0005 1" name="mug_contact5" class="object_contact" mesh="contact5"  />
+            <geom solref=".0005 1" name="mug_contact6" class="object_contact" mesh="contact6"  />
+            <geom solref=".0005 1" name="mug_contact7" class="object_contact" mesh="contact7"  />
+            <geom solref=".0005 1" name="mug_contact8" class="object_contact" mesh="contact8"  />
+            <geom solref=".0005 1" name="mug_contact9" class="object_contact" mesh="contact9"  />
+            <geom solref=".0005 1" name="mug_contact10" class="object_contact" mesh="contact10"  />
+            <geom solref=".0005 1" name="mug_contact11" class="object_contact" mesh="contact11"  />
+            <geom solref=".0005 1" name="mug_contact12" class="object_contact" mesh="contact12"  />
+            <geom solref=".0005 1" name="mug_contact13" class="object_contact" mesh="contact13"  />
         </body>
     </worldbody>
 </mujoco>

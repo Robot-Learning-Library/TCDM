@@ -39,9 +39,9 @@ def rollout(save_folder, writer):
         config = config['params']
     # build environment and load policy
     o, t = config['env']['name'].split('-')
-    config['env']['task_kwargs']['ref_only'] = True
+    # config['env']['task_kwargs']['ref_only'] = True
     # config['env']['task_kwargs']['auto_ref'] = True
-    # config['env']['task_kwargs']['traj_path'] = 'trajectories/specified_trajs'
+    config['env']['task_kwargs']['traj_path'] = 'trajectories/specified_trajs'
     env = suite.load(o, t, config['env']['task_kwargs'], gym_wrap=True)
     try:
         policy = PPO.load(os.path.join(save_folder, 'checkpoint.zip'))
