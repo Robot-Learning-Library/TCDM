@@ -13,7 +13,7 @@ class HandReferenceMotion(object):
     def __init__(self, motion_file, start_step=0):
         self._load_motion(motion_file)
         self._substeps = int(self._reference_motion['SIM_SUBSTEPS'])                
-        self._data_substeps = self._reference_motion.get('DATA_SUBSTEPS', self._substeps)              
+        self._data_substeps = self._reference_motion.get('DATA_SUBSTEPS', self._substeps)
         self._step, self._start_step = 0, int(start_step)
     
     def _load_motion(self, motion_file):
@@ -181,6 +181,7 @@ class HandObjectReferenceMotion(HandReferenceMotion):
             for k in ('object_orientation', 'object_translation'):
                 g.append(self._reference_motion[k][i].flatten())
         return np.concatenate(g)
+
 
 import scipy.interpolate as interpolate
 # this is a valid operation range for object on table

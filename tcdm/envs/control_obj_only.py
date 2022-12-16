@@ -9,6 +9,7 @@ import copy
 from tcdm.envs.control import Environment, Task
 from tcdm.envs.reference import HandObjectReferenceMotion, random_generate_ref
 from tcdm.envs import generated_traj_abspath
+from tcdm.envs.control import quat2euler
 
 
 class SingleObjectTask(Task):
@@ -52,17 +53,17 @@ class ReferenceMotionTask(SingleObjectTask):
 
 
     def initialize_episode(self, physics):
-        start_state = self.reference_motion.reset()[self._init_key]  # _init_key='motion_planned'
-        with physics.reset_context():
-            physics.data.qpos[:] = start_state['position'][-6:]  # object only
-            physics.data.qvel[:] = start_state['velocity'][-6:]
+        # start_state = self.reference_motion.reset()[self._init_key]  # _init_key='motion_planned'
+        # with physics.reset_context():
+        #     physics.data.qpos[:] = start_state['position'][-6:]  # object only
+        #     physics.data.qvel[:] = start_state['velocity'][-6:]
         # physics.reset_mocap2body_xpos()
         return super().initialize_episode(physics)
 
 
     def before_step(self, action, physics):
         super().before_step(action, physics)
-        # self.reference_motion.step()
+        self.reference_motion.step()
 
 
     def get_termination(self, physics):

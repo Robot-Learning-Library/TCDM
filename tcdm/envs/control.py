@@ -157,7 +157,7 @@ class SingleObjectTask(Task):
         obj_rot = physics.named.data.xquat[object_name].copy()
         obj_vel = physics.data.object_velocity(object_name, 'body')
         obj_vel = obj_vel.reshape((1, 6))
-        
+
         full_com = np.concatenate((hand_com, obj_com.reshape((1,3))), 0)
         full_rot = np.concatenate((hand_rot, obj_rot.reshape((1,4))), 0)
         full_vel = np.concatenate((hand_vel, obj_vel), 0)
@@ -322,8 +322,8 @@ class GeneralReferenceMotionTask(SingleObjectTask):
             physics.data.qpos[:30] = self.start_state['position'][:30]
             physics.data.qpos[1] = 0.7  #z-axis of hand
             physics.data.qpos[-6:-3] = self.reference_motion._reference_motion['object_translation'][self._step_count-1]  # x,y,z
-            eular = quat2euler(self.reference_motion._reference_motion['object_orientation'][self._step_count-1])
-            physics.data.qpos[-3:] = eular
+            euler = quat2euler(self.reference_motion._reference_motion['object_orientation'][self._step_count-1])
+            physics.data.qpos[-3:] = euler
 
     @property
     def substeps(self):

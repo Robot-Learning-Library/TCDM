@@ -47,6 +47,10 @@ def _obj_mimic_task_factory(domain_name, name, object_class, target_path):
         # env.attach(robot_class(limp=False))
         env.attach(object_model)
 
+        #! Load the other object - assume fixed
+        fixed_object_model = mj_models.get_object('cup')()
+        env.attach(fixed_object_model)
+
         # # create body
         # i = 0
         # p = [0,0,0]

@@ -38,8 +38,9 @@ class DAPGHammerObject(ObjectModel):
 
 def object_generator(path):
     class __XMLObj__(ObjectModel):
-        def __init__(self, pos=[0.0, 0.0, 0.2], 
-                       quat=[1, 0, 0, 0]):
+        #! Allen: why use 0.2m offset in z when loading all objects? it doesn't make sense. For object lying on table, reference motion needs to apply -0.2m offset in z.
+        def __init__(self, pos=[0.0, 0.0, 0.2],
+                        quat=[1, 0, 0, 0]):
             xml_path = asset_abspath(path)
             super().__init__(pos, quat, xml_path)
     return __XMLObj__
