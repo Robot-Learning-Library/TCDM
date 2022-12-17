@@ -141,7 +141,7 @@ class GeneralReferenceMotionTask(ReferenceMotionTask):
         physics.data.qpos[3:6] = quat2euler(self.reference_motion._reference_motion['object_orientation'][self._step_count-1])  # euler xyz extrinsic
         print(self._step_count, physics.data.qpos[:3], physics.data.qpos[3:6])
 
-        # new object
+        # fixed object
         if self._multi_obj:
             physics.data.qpos[6:] = self.start_state['fixed']['position']
 

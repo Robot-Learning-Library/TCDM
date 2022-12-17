@@ -5,14 +5,11 @@
 
 
 import matplotlib.pyplot as plt
-import pickle as pkl
-import numpy as np
-import glob, yaml, os, imageio, cv2, shutil
-from tcdm import suite
+import yaml, os
 from stable_baselines3 import PPO
 from argparse import ArgumentParser
 
-import time
+from tcdm import suite
 from dm_control import viewer
 
 
@@ -31,10 +28,13 @@ def rollout(save_folder):
     config = yaml.safe_load(open(os.path.join(save_folder, 'exp_config.yaml'), 'r'))
     
     # build environment and load policy
-    o, t = config['env']['name'].split('-')
     config['env']['task_kwargs']['ref_only'] = True
-    config['env']['task_kwargs']['auto_ref'] = True
-    env = suite.load(o, t, config['env']['task_kwargs'], gym_wrap=False, obj_only=True)    # do not wrap gym, otherwise launch interactive viewer from dm_control 
+    # config['env']['task_kwargs']['auto_ref'] = True
+    if 'multi_obj' in config['env'] and config['env']['multi_obj']:
+        env = suite.load_multi(config['env']['name'], config['env']['task_kwargs'], gym_wrap=False, obj_only=config['env']['obj_only'])
+    else:
+        o, t = config['env']['name'].split('-')
+        env = suite.load(o, t, config['env']['task_kwargs'], gym_wrap=False, obj_only=True)    # do not wrap gym, otherwise launch interactive viewer from dm_control 
     policy = PPO.load(os.path.join(save_folder, 'checkpoint.zip'))
 
     # Launch viewer

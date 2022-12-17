@@ -193,6 +193,8 @@ import copy
 traj = copy.copy(dict(data))
 # print(traj['s_0']['motion_planned']['position'][-6:])
 
+traj['offset'] = np.zeros((3))
+
 traj['s_0']['motion_planned']['position'][-6:] = np.hstack((
     translation_tcdm[0],
     quat2euler(orientation_tcdm[0]),

@@ -291,26 +291,33 @@ class GeneralReferenceMotionTask(SingleObjectTask):
                                           full_vel.reshape(-1))).astype(np.float32)
         obs['state'] = np.concatenate((obs['position'], obs['velocity']))
 
-        print('obs', obs['state'][30])
-
         obs['goal'] = self.reference_motion.goals.astype(np.float32)
         # offset = [0.8, 0, 0]
         obs['goal'][4::7] -= self.offset[0]  # shape (7,3), 7=4(oritentation)+3(position), 3=(1,5,10)
         obs['goal'][5::7] -= self.offset[1]
         obs['goal'][6::7] -= self.offset[2]
-        print(obs['goal'].shape, obs['goal'])
         obs['state'] = np.concatenate((obs['state'], obs['goal']))
         return obs
 
     def initialize_episode(self, physics):
+
+        #! This works for now for running visualization but not sure if the correct practice
+        self._step_count = 0
+
         if self.auto_ref:
             new_ref = self._generate_reference_motion()
             self.reference_motion = new_ref
         start_state = self.reference_motion.reset()[self._init_key]  # _init_key='motion_planned'
         self.start_state = start_state
         with physics.reset_context():
-            physics.data.qpos[:] = start_state['position']
-            physics.data.qvel[:] = start_state['velocity']
+            physics.data.qpos[:36] = start_state['position']
+            physics.data.qvel[:36] = start_state['velocity']
+            
+            # fixe object
+            if self._multi_obj:
+                physics.data.qpos[-6:] = start_state['fixed']['position']
+                physics.data.qvel[-6:] = 0
+            
         return super().initialize_episode(physics)
 
     def before_step(self, action, physics):
@@ -320,12 +327,21 @@ class GeneralReferenceMotionTask(SingleObjectTask):
     def after_step(self, physics):
         super().after_step(physics)
         if self.ref_only: # set position of objects (according to reference) and hand (fixed)
-            # print(self._step_count)
+            
+            print('step: ', self._step_count)
+            
+            # hand
             physics.data.qpos[:30] = self.start_state['position'][:30]
             physics.data.qpos[1] = 0.7  #z-axis of hand
-            physics.data.qpos[-6:-3] = self.reference_motion._reference_motion['object_translation'][self._step_count-1]  # x,y,z
+
+            # floating object            
+            physics.data.qpos[30:33] = self.reference_motion._reference_motion['object_translation'][self._step_count-1]  # x,y,z
             euler = quat2euler(self.reference_motion._reference_motion['object_orientation'][self._step_count-1])
-            physics.data.qpos[-3:] = euler
+            physics.data.qpos[33:36] = euler
+
+            # fixed object
+            if self._multi_obj:
+                physics.data.qpos[-6:] = self.start_state['fixed']['position']
 
     @property
     def substeps(self):

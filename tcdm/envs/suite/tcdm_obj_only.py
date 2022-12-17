@@ -9,13 +9,14 @@ import numpy as np
 from tcdm.envs import mj_models, traj_abspath, generated_traj_abspath
 from tcdm.envs import asset_abspath
 from dm_control.utils import containers
-from tcdm.envs.control_obj_only import Environment, GeneralReferenceMotionTask
+from tcdm.envs.control import Environment
+from tcdm.envs.control_obj_only import GeneralReferenceMotionTask
 from tcdm.envs.reference import HandObjectReferenceMotion
 from tcdm.envs.rewards import ObjectMimic
 from tcdm.envs.mujoco import physics_from_mjcf
 
 
-class ObjMimicTask(GeneralReferenceMotionTask):
+class ObjOnlyMimicTask(GeneralReferenceMotionTask):
     def __init__(self, object_name, data_path, reward_kwargs, append_time, ref_only=False, auto_ref=False, task_name=None, traj_path=None):
         reference_motion = HandObjectReferenceMotion(object_name, data_path)
         reward_fn = ObjectMimic(**reward_kwargs)
@@ -72,7 +73,7 @@ def _obj_mimic_task_factory(domain_name, name, object_class, target_path):
         else:
             data_path = generated_traj_abspath(target_path, traj_path, task_name)
 
-        task = ObjMimicTask(object_name, data_path, reward_kwargs, append_time, ref_only, auto_ref, task_name, traj_path)
+        task = ObjOnlyMimicTask(object_name, data_path, reward_kwargs, append_time, ref_only, auto_ref, task_name, traj_path)
 
         # build physics object and create environment
         physics = physics_from_mjcf(env)

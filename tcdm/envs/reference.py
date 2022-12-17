@@ -20,7 +20,7 @@ class HandReferenceMotion(object):
         motion_file = np.load(motion_file, allow_pickle=True)
         self._reference_motion =  {k:v for k, v in motion_file.items()}
         self._reference_motion['s_0'] = self._reference_motion['s_0'][()]
-
+        
     def set_with_given_ref(self, ref):
         self._reference_motion = ref
         self._substeps = int(ref['SIM_SUBSTEPS'])                
