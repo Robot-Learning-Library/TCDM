@@ -20,6 +20,7 @@ class ObjMimicTask(GeneralReferenceMotionTask):
                        pregrasp_init_key, ref_only=False, auto_ref=False, task_name=None, traj_path=None):
         reference_motion = HandObjectReferenceMotion(object_name, data_path)
         reward_fn = ObjectMimic(**reward_kwargs)
+        self._multi_obj = False
         self._append_time = append_time
         # super().__init__(reference_motion, [reward_fn], pregrasp_init_key)  # for ReferenceMotionTask
         super().__init__(reference_motion, [reward_fn], pregrasp_init_key, data_path, ref_only, auto_ref, task_name, object_name, traj_path)

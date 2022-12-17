@@ -10,7 +10,7 @@ from planner.util.geometry import es_points_along_line, get_transform
 
 class SearchSpace(object):
     # def __init__(self, dimension_lengths, O=None):
-    def __init__(self, dimension_lengths, collision_checker):
+    def __init__(self, dimension_lengths, collision_checker, collision_threshold=0.005):
         """
         Initialize Search Space
         :param dimension_lengths: range of each dimension
@@ -39,6 +39,7 @@ class SearchSpace(object):
         #         raise Exception("Obstacle start must be less than obstacle end")
         #     self.obs = index.Index(obstacle_generator(O), interleaved=True, properties=p)
         self.collision_checker = collision_checker
+        self.collision_threshold = collision_threshold
         
 
     def obstacle_free(self, x):
@@ -49,6 +50,7 @@ class SearchSpace(object):
         """
         self.collision_checker.set_transform('float', get_transform(x))
         return not self.collision_checker.in_collision_internal()
+        # return self.collision_checker.min_distance_internal() > self.collision_threshold
         # return self.obs.count(x) == 0
 
     def sample_free(self):

@@ -162,3 +162,40 @@ def rrt(origin, collision_checker, pose_lower, pose_upper, trials=1000, pos_step
             num_verts += 1
     print('Edge free percentage: ', num_verts / trials)    
     return vertices[:num_verts, :], parents[:num_verts]
+
+
+# vertices, parents = rrt(origin=float_obj_R_init_array, 
+#                         collision_checker=collision_checker,
+#                         pose_lower=pose_lower,
+#                         pose_upper=pose_upper,
+#                         trials=100000,
+#                         pos_step_size=0.01,
+#                         euler_step_size=0.10,
+#                         )
+# # vertices, parents = rrt(origin, width, height, obstacles)
+# index = nearest_vertex(float_obj_R_end_array, vertices)
+# euler_distance_weight = 0.1
+# pos_distance = np.linalg.norm(vertices[index, :3] - float_obj_R_end_array[:3])
+# euler_distance = np.linalg.norm(vertices[index, 3:] - float_obj_R_end_array[3:])
+# weighted_distance = pos_distance + euler_distance_weight * euler_distance
+# print('Nearest: ', np.array2string(vertices[index, :], separator=', '))
+# print('Target: ', float_obj_R_end_array)
+# print('Pos distance: ', pos_distance)
+# print('Euler distance: ', euler_distance)
+# print('Weighted distance: ', weighted_distance)
+
+# # Check condition
+# if weighted_distance < 0.05: # needs weighting
+#     print('Path found!')
+#     path_verts = backtrack(index, parents)
+#     for ind, i in enumerate(path_verts):
+#         if parents[i] < 0:
+#             continue
+#         if ind % 5 == 0:
+#             print(f"Index {ind}, {np.array2string(vertices[i], separator=', ')}")
+#         # plt.plot([vertices[i, 0], vertices[parents[i], 0]], 
+#         #         [vertices[i, 1], vertices[parents[i], 1]], c='r')   
+#     print('Number of vertices in the path: ', len(path_verts)) 
+# else:
+#     print('No path found!')
+#     path_verts = []

@@ -6,10 +6,10 @@
 
 import numpy as np
 import copy
-from tcdm.envs.control import Environment, Task
+from tcdm.envs.control import Task
 from tcdm.envs.reference import HandObjectReferenceMotion, random_generate_ref
 from tcdm.envs import generated_traj_abspath
-from tcdm.envs.control import quat2euler
+from tcdm.util.geom import quat2euler
 
 
 class SingleObjectTask(Task):
@@ -28,7 +28,7 @@ class SingleObjectTask(Task):
         obj_rot = physics.named.data.xquat[object_name].copy()
         obj_vel = physics.data.object_velocity(object_name, 'body')
         # print(base_pos, base_vel, obj_com, obj_rot, obj_vel)
-        print('obj: ', obj_com)
+        # print('obj: ', obj_com)
 
         obs['position'] = np.concatenate((base_pos, 
                                           )).astype(np.float32)
@@ -53,11 +53,6 @@ class ReferenceMotionTask(SingleObjectTask):
 
 
     def initialize_episode(self, physics):
-        # start_state = self.reference_motion.reset()[self._init_key]  # _init_key='motion_planned'
-        # with physics.reset_context():
-        #     physics.data.qpos[:] = start_state['position'][-6:]  # object only
-        #     physics.data.qvel[:] = start_state['velocity'][-6:]
-        # physics.reset_mocap2body_xpos()
         return super().initialize_episode(physics)
 
 
@@ -97,6 +92,7 @@ class GeneralReferenceMotionTask(ReferenceMotionTask):
         self.traj_path = traj_path
         self.task_name = task_name
         if self.auto_ref:
+            """Allen: why generates the reference motion again here? What is the purpose of auto_ref flag?"""
             reference_motion = self._generate_reference_motion(object_name)
         super().__init__(reference_motion, reward_fns, reward_weights, random)
 
@@ -114,36 +110,44 @@ class GeneralReferenceMotionTask(ReferenceMotionTask):
 
 
     def initialize_episode(self, physics):
+
+        #! This works for now for running visualization but not sure if the correct practice
+        self._step_count = 0
+        
         if self.auto_ref:
             new_ref = self._generate_reference_motion()
             self.reference_motion = new_ref
-        self._init_key = 'initialized'
+        self._init_key = 'motion_planned'
         start_state = self.reference_motion.reset()[self._init_key]  # _init_key='motion_planned'
         self.start_state = start_state
         with physics.reset_context():
-            physics.data.qpos[:] = start_state['position'][-6:]  # object only
-            physics.data.qvel[:] = start_state['velocity'][-6:]  
+            # qpos use euler, start_state in euler too, object_orientation in quat
+            physics.data.qpos[:6] = start_state['position'][-6:]  # object only
+            physics.data.qvel[:6] = start_state['velocity'][-6:]
+
+            # fixe object
+            if self._multi_obj:
+                physics.data.qpos[6:] = start_state['fixed']['position']
+                physics.data.qvel[6:] = 0
         return super().initialize_episode(physics)
 
 
     def after_step(self, physics):
         super().after_step(physics)
         # physics.reset_mocap2body_xpos()
-        # print(physics.data.qpos)
         # physics.data.xpos[-1,2] = 0.2
-        physics.data.qpos[0] = 0.3
-        physics.data.qpos[1] = 0.2
-        physics.data.qpos[2] = 0.3
-        # print(physics.data.qpos)
+        # obj_com = physics.named.data.xipos[self.object_name].copy()
+        physics.data.qpos[:3] = self.reference_motion._reference_motion['object_translation'][self._step_count-1]  # x,y,z
+        physics.data.qpos[3:6] = quat2euler(self.reference_motion._reference_motion['object_orientation'][self._step_count-1])  # euler xyz extrinsic
+        print(self._step_count, physics.data.qpos[:3], physics.data.qpos[3:6])
 
-        # if self.ref_only: # set position of objects (according to reference) and hand (fixed)
-        #     # print(self._step_count)
-        #     # physics.data.qpos[:30] = self.start_state['position'][:30]
-        #     # physics.data.qpos[1] = 0.7  #z-axis of hand
-        # physics.data.qpos[:3] = self.reference_motion._reference_motion['object_translation'][self._step_count-1]  # x,y,z
-        # physics.data.qpos[2] += 0.01
-        #     euler = quat2euler(self.reference_motion._reference_motion['object_orientation'][self._step_count-1])
-        #     physics.data.qpos[-3:] = euler
+        # new object
+        if self._multi_obj:
+            physics.data.qpos[6:] = self.start_state['fixed']['position']
+
+        ## Fix hand
+        # physics.data.qpos[:30] = self.start_state['position'][:30]
+        # physics.data.qpos[1] = 0.7  #z-axis of hand
 
 
     @property
