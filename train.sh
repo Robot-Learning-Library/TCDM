@@ -1,11 +1,10 @@
 DATE=`date '+%Y%m%d_%H%M'`
 echo "Save as: " $DATE
 
-# declare -a tasks=('cup-pour1')
+declare -a tasks=('cup-pour1')
 
 #declare -a tasks=('toothpaste-lift') 
-
-declare -a tasks=('mug-drink3' 'toothpaste-lift')
+# declare -a tasks=('mug-drink3')
 
 mkdir -p log/$DATE
 for i in ${!tasks[@]}; do

@@ -24,7 +24,8 @@ parser.add_argument('--save_folder', default='pretrained_agents/hammer_use1/',
 parser.add_argument('--render', action="store_true", help="Supply flag to render mp4")
 
 
-def render(writer, physics, AA=2, height=256, width=256):
+# def render(writer, physics, AA=2, height=768, width=768):
+def render(writer, physics, AA=2, height=512, width=512):
     if writer is None:
         return
     img = physics.render(camera_id=0, height=height * AA, width=width * AA)
@@ -34,30 +35,38 @@ def render(writer, physics, AA=2, height=256, width=256):
 def rollout(save_folder, writer):
     # get experiment config
     config =  yaml.safe_load(open(os.path.join(save_folder, 'exp_config.yaml'), 'r'))
-    if config['params'] is not None: # saved config may have one more level
+    if 'params' in config: # saved config may have one more level
         config = config['params']
     # build environment and load policy
     o, t = config['env']['name'].split('-')
     # config['env']['task_kwargs']['ref_only'] = True
     # config['env']['task_kwargs']['auto_ref'] = True
+    config['env']['task_kwargs']['traj_path'] = 'trajectories/specified_trajs'
     env = suite.load(o, t, config['env']['task_kwargs'], gym_wrap=True)
     try:
         policy = PPO.load(os.path.join(save_folder, 'checkpoint.zip'))
     except:
         policy = PPO.load(os.path.join(save_folder, 'restore_checkpoint'))
-    log = []
+    
+    log = False
+    logger = {'s': [], 'a':[]}
     # rollout the policy and print total reward
     s, done, total_reward = env.reset(), False, 0
     render(writer, env.wrapped.physics)
     while not done:
-        log.append(s['state'])
         action, _ = policy.predict(s['state'], deterministic=True)
         s, r, done, __ = env.step(action)
         render(writer, env.wrapped.physics)
         total_reward += r
+        if log:
+            logger['s'].append(s['state'])
+            logger['a'].append(action)
     print('Total reward:', total_reward)
-    df = pd.DataFrame(log)
-    df.to_csv(f's.csv', index=False, header=True)
+    if log:
+        df = pd.DataFrame(logger['s'])
+        df.to_csv(f's.csv', index=False, header=True)
+        df = pd.DataFrame(logger['a'])
+        df.to_csv(f'a.csv', index=False, header=True)
 
 
 if __name__ == "__main__":

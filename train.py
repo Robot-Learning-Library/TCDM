@@ -7,7 +7,7 @@
 import traceback
 import hydra, os, wandb, yaml
 from tcdm.rl import trainers
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig, OmegaConf, open_dict
 from hydra.core.hydra_config import HydraConfig
 
 
@@ -56,8 +56,10 @@ def train(cfg: DictConfig):
             yaml.dump(save_dict, open('exp_config.yaml', 'w'))
             print('Config:')
             print(cfg_yaml)
-        cfg.env.task_kwargs.ref_only = False
-        cfg['env']['task_kwargs']['auto_ref'] = True
+        with open_dict(cfg):    
+            # cfg['env']['task_kwargs']['traj_path'] = 'trajectories/specified_trajs'
+            cfg['env']['task_kwargs']['ref_only'] = False
+            cfg['env']['task_kwargs']['auto_ref'] = True
         if cfg.agent.name == 'PPO':
             print(resume_model)
             trainers.ppo_trainer(cfg, resume_model)

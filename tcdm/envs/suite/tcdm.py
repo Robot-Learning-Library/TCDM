@@ -68,15 +68,18 @@ def _obj_mimic_task_factory(domain_name, name, object_class, robot_class, target
         # print('task name:', task_name)
 
         if traj_path is None:
-            # data_path = traj_abspath(target_path, traj_path='trajectories')
-            data_path = traj_abspath(target_path, traj_path='trajectories/specified_trajs')
+            data_path = traj_abspath(target_path, traj_path='trajectories')
         else:
             data_path = generated_traj_abspath(target_path, traj_path, task_name)
 
         task = ObjMimicTask(object_name, data_path, reward_kwargs, append_time, pregrasp, ref_only, auto_ref, task_name, traj_path)
 
         # build physics object and create environment
-        physics = physics_from_mjcf(env)
+        if ref_only:
+            gravity_compensation_for_all = True
+        else:  
+            gravity_compensation_for_all = False
+        physics = physics_from_mjcf(env, gravity_compensation_for_all=gravity_compensation_for_all)
         return Environment(physics, task,
                            n_sub_steps=task.substeps,
                            **environment_kwargs)
