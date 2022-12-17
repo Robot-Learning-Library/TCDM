@@ -295,6 +295,10 @@ class GeneralReferenceMotionTask(SingleObjectTask):
         return obs
 
     def initialize_episode(self, physics):
+
+        #! This works for now for running visualization but not sure if the correct practice
+        self._step_count = 0
+
         self.additional_step_cnt = 0 # step after the reference motion is done
         self.additional_step = False # whether to step after the reference motion is done
         if self.auto_ref:
