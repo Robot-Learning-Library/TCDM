@@ -310,7 +310,7 @@ class GeneralReferenceMotionTask(SingleObjectTask):
             physics.data.qpos[:36] = start_state['position']
             physics.data.qvel[:36] = start_state['velocity']
             
-            # fixe object
+            # fixed object
             if self._multi_obj:
                 physics.data.qpos[-6:] = start_state['fixed']['position']
                 physics.data.qvel[-6:] = 0
@@ -352,7 +352,8 @@ class GeneralReferenceMotionTask(SingleObjectTask):
             physics.data.qpos[1] = 0.7  #z-axis of hand
 
             # floating object            
-            physics.data.qpos[30:33] = self.reference_motion._reference_motion['object_translation'][self._step_count-1]  # x,y,z
+            physics.data.qpos[30:32] = self.reference_motion._reference_motion['object_translation'][self._step_count-1][:2]  # x,y
+            physics.data.qpos[32] = self.reference_motion._reference_motion['object_translation'][self._step_count-1][-1] - 0.2  # z, global frame to local frame
             euler = quat2euler(self.reference_motion._reference_motion['object_orientation'][self._step_count-1])
             physics.data.qpos[33:36] = euler
 
@@ -364,20 +365,12 @@ class GeneralReferenceMotionTask(SingleObjectTask):
     @property
     def substeps(self):
         # print('substeps: ', self.reference_motion.substeps)
-        if self.ref_only and self.reference_motion.substeps == 10:
-            substeps = int(self.reference_motion.substeps / 3) # the above substeps does not replicate the reference
-        else:
-            substeps = self.reference_motion.substeps
+        substeps = self.reference_motion.substeps
         return substeps
 
     def get_termination(self, physics):
-        # for training
-        # if self.reference_motion.next_done:
-        #     return 0.0
-        # return super().get_termination(physics)
-
-        # after training
-        if not self.ref_only and self.reference_motion.next_done:
+ 
+        if not self.ref_only and self.reference_motion.next_done: # after training, test with post procedure: lossen the hand
             # if done, additional steps for openning the hand
             # this will not affect the reward
             smooth_loosen_steps = 30
@@ -405,6 +398,10 @@ class GeneralReferenceMotionTask(SingleObjectTask):
                 return 0.0
             else:
                 None
+        else: # without post procedure, or during training
+            if self.reference_motion.next_done:
+                return 0.0
+
         return super().get_termination(physics)
 
     # def get_observation(self, physics):

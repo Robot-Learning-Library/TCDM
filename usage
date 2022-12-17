@@ -9,3 +9,12 @@ pretrained cup:
 python rollout.py --save_folder outputs/2022-11-24/21-42-24  --render
 train with pretrained cup:
 python rollout.py --save_folder outputs/2022-11-25/03-45-35  --render
+
+multiple object task banana_cup_pass1
+python visualize.py --save_folder arbitrary_traj_agents/banana_cup_pass1
+
+generete video for original trajectory:
+python generate_traj_video.py --render --env hammer_use1
+for all:
+python generate_traj_video.py --render --env all
+
