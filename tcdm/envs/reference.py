@@ -248,7 +248,6 @@ def random_generate_ref(original_ref, initial_translation_offset=np.zeros(3)):
 
     new_traj['object_translation'] = new_trans_data
     new_traj['object_orientation'] = new_ori_data
-    new_traj['SIM_SUBSTEPS'] = 10 # to adapt to current simulator
-    # new_traj['SIM_SUBSTEPS'] = 3 # to adapt to current simulator
+    new_traj['SIM_SUBSTEPS'] = 10
 
     return new_traj

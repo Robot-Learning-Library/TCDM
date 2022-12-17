@@ -364,8 +364,8 @@ class GeneralReferenceMotionTask(SingleObjectTask):
 
     @property
     def substeps(self):
-        # print('substeps: ', self.reference_motion.substeps)
         substeps = self.reference_motion.substeps
+        # print('substeps: ', substeps)
         return substeps
 
     def get_termination(self, physics):

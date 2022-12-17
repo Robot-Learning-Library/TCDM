@@ -70,7 +70,7 @@ if __name__ == "__main__":
                 if args.render:
                     video_folder = f'obj_traj_video/'
                     os.makedirs(video_folder, exist_ok=True)
-                    writer = imageio.get_writer(f'{video_folder}/{args.env}.mp4',quality=10, fps=45)
+                    writer = imageio.get_writer(f'{video_folder}/{args.env}.mp4',quality=10, fps=25) # the default video fps=25 in original data
                     rollout(args.save_folder, writer)
                     writer.close()
                 else:
