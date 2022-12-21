@@ -58,6 +58,8 @@ class GymWrapper(core.Env):
                 self._flat_dict = True
         else:
             self.observation_space = _spec_to_box([base_env.observation_spec()])
+        self.action_spec = base_env.action_spec
+        self.physics = base_env.physics
 
     def reset(self):
         step = self._base_env.reset()

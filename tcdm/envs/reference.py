@@ -17,6 +17,8 @@ class HandReferenceMotion(object):
         self._step, self._start_step = 0, int(start_step)
     
     def _load_motion(self, motion_file):
+        if '.npz' not in motion_file:
+            motion_file += '.npz'
         motion_file = np.load(motion_file, allow_pickle=True)
         self._reference_motion =  {k:v for k, v in motion_file.items()}
         self._reference_motion['s_0'] = self._reference_motion['s_0'][()]

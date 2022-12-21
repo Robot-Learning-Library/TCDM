@@ -105,11 +105,15 @@ class Task(control.Task):
     def after_step(self, physics):
         """Called immediately after environment step: no-op by default"""
 
-    def get_observation(self, physics):
+    def get_observation(self, physics, manipulated_only=False):
         """Returns a default observation of current physics state."""
         obs = collections.OrderedDict()
-        obs['position'] = physics.data.qpos.astype(np.float32).copy()
-        obs['velocity'] = physics.data.qvel.astype(np.float32).copy()
+        if manipulated_only:
+            obs['position'] = physics.data.qpos.astype(np.float32).copy()[:36] # the last 6 are second object
+            obs['velocity'] = physics.data.qvel.astype(np.float32).copy()[:36]
+        else:
+            obs['position'] = physics.data.qpos.astype(np.float32).copy()
+            obs['velocity'] = physics.data.qvel.astype(np.float32).copy()
         motor_joints = physics.data.qpos[:physics.adim]
         obs['zero_ac'] = _normalize_action(physics, motor_joints)
         return obs
@@ -246,7 +250,7 @@ class GeneralReferenceMotionTask(SingleObjectTask):
         return ref_obj
 
     def get_observation(self, physics):
-        obs = Task.get_observation(self, physics)
+        obs = Task.get_observation(self, physics, manipulated_only=True)
         base_pos = obs['position']
         base_vel = obs['velocity']
 
@@ -351,16 +355,16 @@ class GeneralReferenceMotionTask(SingleObjectTask):
             physics.data.qpos[:30] = self.start_state['position'][:30]
             physics.data.qpos[1] = 0.7  #z-axis of hand
 
+            z_global_local_offset = 0.2
             # floating object            
             physics.data.qpos[30:32] = self.reference_motion._reference_motion['object_translation'][self._step_count-1][:2]  # x,y
-            physics.data.qpos[32] = self.reference_motion._reference_motion['object_translation'][self._step_count-1][-1] - 0.2  # z, global frame to local frame
+            physics.data.qpos[32] = self.reference_motion._reference_motion['object_translation'][self._step_count-1][-1] - z_global_local_offset  # z, global frame to local frame
             euler = quat2euler(self.reference_motion._reference_motion['object_orientation'][self._step_count-1])
             physics.data.qpos[33:36] = euler
 
             # fixed object
             if self._multi_obj:
                 physics.data.qpos[-6:] = self.start_state['fixed']['position']
-
 
     @property
     def substeps(self):

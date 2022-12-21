@@ -46,13 +46,13 @@ def interpolate_quat(R_init, R_end, num_point):
 ##########################################################################
 
 # Fixed object, e.g., a cup
-target_obj_path = '/home/allen/TCDM/tcdm/envs/assets/meshes/objects/cup/cup.stl'
+target_obj_path = './tcdm/envs/assets/meshes/objects/cup/cup.stl'
 
 # Moving object, e.g., a banana 
-float_obj_path = '/home/allen/TCDM/tcdm/envs/assets/meshes/objects/banana/banana.stl'
+float_obj_path = './tcdm/envs/assets/meshes/objects/banana/banana.stl'
 
 # Trajectory path
-traj_path = '/home/allen/TCDM/trajectories/multi_trajs/banana-cup-pass1.npz'
+traj_path = './trajectories/multi_trajs/banana_cup_pass1/banana_cup_pass1.npz'
 
 # Load meshes
 target_obj = trimesh.load(target_obj_path)
@@ -60,15 +60,17 @@ float_obj = trimesh.load(float_obj_path)
 # print(target_obj.bounds)
 # target_obj.show()
 
+z_offset = 0.2
 # Initial pose of the target and float objects - x,y,z,r,p,y - Euler extrinsic XYZ convention
 float_obj_X_init_array = [0.01895152, -0.01185687, -0.17970488, 0, 0.08599904, 1.3]  # from banana_pass1.npz
 # float_obj_X_init_array = [0.05, 0.0, 0-0.2+0.023, 0.0, 0.0, 0.0]  # account for 20cm offset in z when loading objects in tcdm
-target_obj_X_array = [-0.02, -0.165, 0-0.2+0.04, 0.0, 0.0, 0.0]
+# target_obj_X_array = [-0.02, -0.165, 0-z_offset+0.04, 0.0, 0.0, 0.0]
+target_obj_X_array = [-0.2, -0.165, 0-z_offset+0.04, 0.0, 0.0, 0.0]
 float_obj_X_init = get_transform(float_obj_X_init_array)
 target_obj_X = get_transform(target_obj_X_array)
 
 # Final pose of the float object - needs to manually specify right now - assume collision free with the target
-float_obj_X_end_array = [-0.02, -0.175, 0.13-0.2+0.023, 0.0, -1.57, 0.0]
+float_obj_X_end_array = [-0.02, -0.175, 0.13-z_offset+0.023, 0.0, -1.57, 0.0]
 float_obj_X_end = get_transform(float_obj_X_end_array)
 
 # Configuration space boundaries
@@ -188,7 +190,7 @@ def load_motion(motion_file):
     reference_motion =  {k:v for k, v in motion_file.items()}
     reference_motion['s_0'] = reference_motion['s_0'][()]
     return reference_motion
-data = load_motion('/home/allen/TCDM/trajectories/banana_pass1.npz')
+data = load_motion('./trajectories/banana_pass1.npz')
 import copy
 traj = copy.copy(dict(data))
 # print(traj['s_0']['motion_planned']['position'][-6:])
@@ -204,7 +206,7 @@ traj['s_0']['motion_planned']['position'][-6:] = np.hstack((
 traj['s_0']['motion_planned']['fixed'] = {}
 traj['s_0']['motion_planned']['fixed']['position'] = np.array(target_obj_X_array)
 
-traj['object_translation'] = np.vstack((translation_tcdm))
+traj['object_translation'] = np.vstack((translation_tcdm)) + np.array([0,0,z_offset])
 traj['object_orientation'] = np.vstack((orientation_tcdm))
 traj['length'] = len(translation_tcdm)
 traj['SIM_SUBSTEPS'] = int(data['SIM_SUBSTEPS']/3)

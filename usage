@@ -1,4 +1,6 @@
+# banana policy
 python rollout.py --save_folder outputs/2022-11-06/12-00-55  --render
+# cup policy
 python rollout.py --save_folder outputs/2022-11-18/03-10-51  --render
 
 pretrained mug:
@@ -18,3 +20,5 @@ python generate_traj_video.py --render --env hammer_use1
 for all:
 python generate_traj_video.py --render --env all
 
+# multiple objects manipulation
+python rollout.py --save_folder arbitrary_traj_agents/banana_cup_pass1 --checkpoint outputs/2022-11-06/12-00-55 --traj_path trajectories/multi_trajs
