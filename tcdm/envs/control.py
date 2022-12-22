@@ -394,8 +394,8 @@ class GeneralReferenceMotionTask(SingleObjectTask):
 
             # set fixed obj and hand pose
             # physics.data.qpos[:6] = self.end_hand_pose
-            physics.data.qpos[30:] = self.end_obj_pose
-            physics.data.qvel[30:] = 0
+            # physics.data.qpos[30:] = self.end_obj_pose
+            # physics.data.qvel[30:] = 0
 
             self.additional_step = True
             if self.additional_step_cnt > 150:
