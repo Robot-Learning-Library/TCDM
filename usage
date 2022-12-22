@@ -21,4 +21,5 @@ for all:
 python generate_traj_video.py --render --env all
 
 # multiple objects manipulation
-python rollout.py --save_folder arbitrary_traj_agents/banana_cup_pass1 --checkpoint outputs/2022-11-06/12-00-55 --traj_path trajectories/multi_trajs
+python planner.py
+python rollout.py --save_folder arbitrary_traj_agents/banana_cup_pass1 --checkpoint outputs/2022-11-06/12-00-55 --traj_path trajectories/multi_trajs --render

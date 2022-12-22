@@ -62,10 +62,10 @@ float_obj = trimesh.load(float_obj_path)
 
 z_offset = 0.2
 # Initial pose of the target and float objects - x,y,z,r,p,y - Euler extrinsic XYZ convention
-float_obj_X_init_array = [0.01895152, -0.01185687, -0.17970488, 0, 0.08599904, 1.3]  # from banana_pass1.npz
+float_obj_X_init_array = [0.01895152, -0.01185687, -0.17970488, 0, 0.08599904, -1.3]  # from banana_pass1.npz
 # float_obj_X_init_array = [0.05, 0.0, 0-0.2+0.023, 0.0, 0.0, 0.0]  # account for 20cm offset in z when loading objects in tcdm
-# target_obj_X_array = [-0.02, -0.165, 0-z_offset+0.04, 0.0, 0.0, 0.0]
-target_obj_X_array = [-0.2, -0.165, 0-z_offset+0.04, 0.0, 0.0, 0.0]
+target_obj_X_array = [-0.02, -0.165, 0-z_offset+0.04, 0.0, 0.0, 0.0]
+# target_obj_X_array = [-0.2, -0.165, 0-z_offset+0.04, 0.0, 0.0, 0.0]  # avoid collision with the cup
 float_obj_X_init = get_transform(float_obj_X_init_array)
 target_obj_X = get_transform(target_obj_X_array)
 

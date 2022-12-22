@@ -24,9 +24,9 @@ parser = ArgumentParser(description="Example code for loading pre-trained polici
 parser.add_argument('--save_folder', default='pretrained_agents/hammer_use1/', 
                                      help="Save folder containing agent checkpoint/config")
 parser.add_argument('--checkpoint', default=None, help="checkpoint folder")
-# parser.add_argument('--config', default=None, help="config folder")
+parser.add_argument('--traj_path', default=None, help="trajectory path folder")
 parser.add_argument('--render', action="store_true", help="Supply flag to render mp4")
-
+parser.add_argument('--ref_only', type=bool, default=False, help="whether only shows the reference trajectory")
 
 # def render(writer, physics, AA=2, height=768, width=768):
 def render(writer, physics, AA=2, height=512, width=512):
@@ -47,10 +47,12 @@ def rollout(args, writer):
     config =  yaml.safe_load(open(os.path.join(save_folder, 'exp_config.yaml'), 'r'))
     if 'params' in config: # saved config may have one more level
         config = config['params']
-    # config['env']['task_kwargs']['ref_only'] = True
+    config['env']['task_kwargs']['ref_only'] = args.ref_only
     # config['env']['task_kwargs']['auto_ref'] = True
     # config['env']['task_kwargs']['traj_path'] = 'trajectories/specified_trajs'
     # config['env']['task_kwargs']['traj_path'] = 'trajectories/multi_trajs'
+    if args.traj_path is not None:
+        config['env']['task_kwargs']['traj_path'] = args.traj_path
     # build environment and load policy
     if 'multi_obj' in config['env'] and config['env']['multi_obj']:
         env = suite.load_multi(config['env']['name'], config['env']['task_kwargs'], gym_wrap=gym_wrap, obj_only=config['env']['obj_only'])
