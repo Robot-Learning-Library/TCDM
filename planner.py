@@ -83,7 +83,7 @@ float_obj_X_end = get_transform(float_obj_X_end_array)
 # Configuration space boundaries
 # pose_lower = np.array([-0.1, -0.2, -0.2, -3, -3, -3])
 # pose_upper = np.array([ 0.1,  0.2,  0.2,  3,  3,  3])
-pose_lower = np.array([-0.1, -0.2, -0.2, -1, -1, -1, -1])
+pose_lower = np.array([-0.1, -0.2, -0.2,  -1, -1, -1, -1])
 pose_upper = np.array([ 0.1,  0.2,  0.2,  1,  1,  1,  1])
 collision_threshold = 0.003 # slow
 
@@ -223,7 +223,7 @@ traj['s_0']['motion_planned']['position'][-6:] = np.hstack((
 
 # fixed object
 traj['s_0']['motion_planned']['fixed'] = {}
-traj['s_0']['motion_planned']['fixed']['position'] = np.array(target_obj_X_array)
+traj['s_0']['motion_planned']['fixed']['position'] = np.array(target_obj_X_array_r_array)
 
 traj['object_translation'] = np.vstack((translation_tcdm)) + np.array([0,0,z_offset])
 traj['object_orientation'] = np.vstack((orientation_tcdm))
