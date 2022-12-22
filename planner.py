@@ -62,7 +62,7 @@ float_obj = trimesh.load(float_obj_path)
 
 z_offset = 0.2
 # Initial pose of the target and float objects - x,y,z,r,p,y - Euler extrinsic XYZ convention
-float_obj_X_init_array = [0.01895152, -0.01185687, -0.17970488, 0, 0.08599904, 1.3]  # from banana_pass1.npz
+float_obj_X_init_array = [0.01895152, -0.01185687, -0.17970488, -3.05750797, 0.08599904, -1.99028331]
 # float_obj_X_init_array = [0.05, 0.0, 0-0.2+0.023, 0.0, 0.0, 0.0]  # account for 20cm offset in z when loading objects in tcdm
 # target_obj_X_array = [-0.02, -0.165, 0-z_offset+0.04, 0.0, 0.0, 0.0]
 target_obj_X_array = [-0.2, -0.165, 0-z_offset+0.04, 0.0, 0.0, 0.0]
@@ -147,8 +147,8 @@ for X_ind, X in enumerate(path):
         # Interp position and orientation separately
         _, p_interp_all = interpolate_pos(prev_X[:3], X[:3], num_point)
         _, r_interp_all = interpolate_quat(
-            R.from_euler(seq='xyz', angles=prev_X[3:], degrees=False),
-            R.from_euler(seq='xyz', angles=X[3:], degrees=False),
+            R.from_euler(seq='XYZ', angles=prev_X[3:], degrees=False),
+            R.from_euler(seq='XYZ', angles=X[3:], degrees=False),
             num_point)
 
         # Do not add the first one since that's prev
@@ -180,7 +180,7 @@ translation_tcdm = []
 orientation_tcdm = []
 for path in path_full:
     translation_tcdm += [path[:3]]
-    q = R.from_euler(seq='xyz', angles=path[3:], degrees=False).as_quat()
+    q = R.from_euler(seq='XYZ', angles=path[3:], degrees=False).as_quat()
     orientation_tcdm += [tuple([q[-1]]+list(q[:3]))]  # (x,y,z,w) -> (w,x,y,z)
 print('Quaternion (w,x,y,z) trajectory after interpolation: ', orientation_tcdm)
 
