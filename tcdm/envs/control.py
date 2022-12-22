@@ -313,8 +313,8 @@ class GeneralReferenceMotionTask(SingleObjectTask):
         with physics.reset_context():
             physics.data.qpos[:36] = start_state['position']
             physics.data.qvel[:36] = start_state['velocity']
-            
-            # fixed object
+
+            # fixe object
             if self._multi_obj:
                 physics.data.qpos[-6:] = start_state['fixed']['position']
                 physics.data.qvel[-6:] = 0

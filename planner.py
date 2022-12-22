@@ -147,8 +147,8 @@ for X_ind, X in enumerate(path):
         # Interp position and orientation separately
         _, p_interp_all = interpolate_pos(prev_X[:3], X[:3], num_point)
         _, r_interp_all = interpolate_quat(
-            R.from_euler(seq='xyz', angles=prev_X[3:], degrees=False),
-            R.from_euler(seq='xyz', angles=X[3:], degrees=False),
+            R.from_euler(seq='XYZ', angles=prev_X[3:], degrees=False),
+            R.from_euler(seq='XYZ', angles=X[3:], degrees=False),
             num_point)
 
         # Do not add the first one since that's prev
@@ -180,7 +180,7 @@ translation_tcdm = []
 orientation_tcdm = []
 for path in path_full:
     translation_tcdm += [path[:3]]
-    q = R.from_euler(seq='xyz', angles=path[3:], degrees=False).as_quat()
+    q = R.from_euler(seq='XYZ', angles=path[3:], degrees=False).as_quat()
     orientation_tcdm += [tuple([q[-1]]+list(q[:3]))]  # (x,y,z,w) -> (w,x,y,z)
 print('Quaternion (w,x,y,z) trajectory after interpolation: ', orientation_tcdm)
 
