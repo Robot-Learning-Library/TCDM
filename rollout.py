@@ -26,6 +26,7 @@ parser.add_argument('--save_folder', default='pretrained_agents/hammer_use1/',
 parser.add_argument('--checkpoint', default=None, help="checkpoint folder")
 parser.add_argument('--traj_path', default=None, help="trajectory path folder")
 parser.add_argument('--render', action="store_true", help="Supply flag to render mp4")
+parser.add_argument('--auto_ref', type=bool, default=False, help="automatically generate reference trajectory for training")
 parser.add_argument('--ref_only', type=bool, default=False, help="whether only shows the reference trajectory")
 
 # def render(writer, physics, AA=2, height=768, width=768):
@@ -48,7 +49,7 @@ def rollout(args, writer):
     if 'params' in config: # saved config may have one more level
         config = config['params']
     config['env']['task_kwargs']['ref_only'] = args.ref_only
-    # config['env']['task_kwargs']['auto_ref'] = True
+    config['env']['task_kwargs']['auto_ref'] = args.auto_ref
     # config['env']['task_kwargs']['traj_path'] = 'trajectories/specified_trajs'
     # config['env']['task_kwargs']['traj_path'] = 'trajectories/multi_trajs'
     if args.traj_path is not None:

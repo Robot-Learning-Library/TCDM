@@ -99,21 +99,26 @@ class Task(control.Task):
         """Sets the control signal for the actuators to values in `action`."""
         self._step_count += 1
         action = _denormalize_action(physics, action)
-        # print('action: ',action)
         physics.set_control(action)
 
     def after_step(self, physics):
         """Called immediately after environment step: no-op by default"""
 
-    def get_observation(self, physics, manipulated_only=False):
+    def get_observation(self, physics, obj_idx=None):
         """Returns a default observation of current physics state."""
         obs = collections.OrderedDict()
-        if manipulated_only:
-            obs['position'] = physics.data.qpos.astype(np.float32).copy()[:36] # the last 6 are second object
-            obs['velocity'] = physics.data.qvel.astype(np.float32).copy()[:36]
-        else:
+        if obj_idx is None:
             obs['position'] = physics.data.qpos.astype(np.float32).copy()
             obs['velocity'] = physics.data.qvel.astype(np.float32).copy()
+        else:
+            hand_pos = physics.data.qpos.astype(np.float32).copy()[:30]
+            hand_vel = physics.data.qvel.astype(np.float32).copy()[:30]
+            obj_pos = physics.data.qpos.astype(np.float32).copy()[30+6*obj_idx:36+6*obj_idx]
+            obj_vel = physics.data.qvel.astype(np.float32).copy()[30+6*obj_idx:36+6*obj_idx]
+
+            obs['position'] = np.concatenate([hand_pos, obj_pos])
+            obs['velocity'] = np.concatenate([hand_vel, obj_vel])
+
         motor_joints = physics.data.qpos[:physics.adim]
         obs['zero_ac'] = _normalize_action(physics, motor_joints)
         return obs
@@ -182,6 +187,44 @@ class SingleObjectTask(Task):
     def object_name(self):
         return self._object_name
 
+# class MultiObjectTask(Task):
+#     def __init__(self, object_names, reward_fns, reward_weights=None, random=None):
+#         self._object_names = object_names
+#         super().__init__(reward_fns, reward_weights=reward_weights, random=random)
+    
+#     def get_observation(self, physics):
+#         obs = super().get_observation(physics)
+#         base_pos = obs['position']
+#         base_vel = obs['velocity']
+
+#         hand_poses = physics.body_poses
+#         hand_com = hand_poses.pos.reshape((-1, 3))
+#         hand_rot = hand_poses.rot.reshape((-1, 4))
+#         hand_lv = hand_poses.linear_vel.reshape((-1, 3))
+#         hand_av = hand_poses.angular_vel.reshape((-1, 3))
+#         hand_vel = np.concatenate((hand_lv, hand_av), 1)
+
+#         object_name = self.object_name
+#         obj_com = physics.named.data.xipos[object_name].copy()
+#         obj_rot = physics.named.data.xquat[object_name].copy()
+#         obj_vel = physics.data.object_velocity(object_name, 'body')
+#         obj_vel = obj_vel.reshape((1, 6))
+
+#         full_com = np.concatenate((hand_com, obj_com.reshape((1,3))), 0)
+#         full_rot = np.concatenate((hand_rot, obj_rot.reshape((1,4))), 0)
+#         full_vel = np.concatenate((hand_vel, obj_vel), 0)
+
+#         obs['position'] = np.concatenate((base_pos, full_com.reshape(-1), 
+#                                           full_rot.reshape(-1))).astype(np.float32)
+#         obs['velocity'] = np.concatenate((base_vel, 
+#                                           full_vel.reshape(-1))).astype(np.float32)
+#         obs['state'] = np.concatenate((obs['position'], obs['velocity']))
+#         return obs
+    
+#     @property
+#     def object_name(self):
+#         return self._object_names
+
 class ReferenceMotionTask(SingleObjectTask):
     def __init__(self, reference_motion, reward_fns, init_key,
                        reward_weights=None, random=None):
@@ -202,7 +245,6 @@ class ReferenceMotionTask(SingleObjectTask):
         self.reference_motion.step()
         # physics.data.qpos[-3:] = self.start_state['position'][-3:]
         # physics.data.qvel[-3:] = self.start_state['velocity'][-3:]
-        # import pdb; pdb.set_trace()
 
     def get_termination(self, physics):
         if self.reference_motion.next_done:
@@ -250,7 +292,7 @@ class GeneralReferenceMotionTask(SingleObjectTask):
         return ref_obj
 
     def get_observation(self, physics):
-        obs = Task.get_observation(self, physics, manipulated_only=True)
+        obs = Task.get_observation(self, physics, obj_idx=0)  # obj_idx specifies which object to get observation
         base_pos = obs['position']
         base_vel = obs['velocity']
 
@@ -373,7 +415,6 @@ class GeneralReferenceMotionTask(SingleObjectTask):
         return substeps
 
     def get_termination(self, physics):
- 
         if not self.ref_only and self.reference_motion.next_done: # after training, test with post procedure: lossen the hand
             # if done, additional steps for openning the hand
             # this will not affect the reward
