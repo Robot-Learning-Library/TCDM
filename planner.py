@@ -61,7 +61,11 @@ float_obj = trimesh.load(float_obj_path)
 # print(target_obj.bounds)
 # target_obj.show()
 
+# Parameters
 z_offset = 0.2
+collision_threshold = 0.003 # slow
+q_bound_buffer = 0.2
+
 # Initial pose of the target and float objects - x,y,z,r,p,y - Euler extrinsic XYZ convention
 float_obj_X_init_r_array = [0.01895152, -0.01185687, -0.17970488, -3.05750797, 0.08599904, -1.99028331]  # from banana_pass1.npz
 float_obj_X_init_array = float_obj_X_init_r_array[:3] + euler2quat(float_obj_X_init_r_array[3:]).tolist()   # convert to quat (w,x,y,z)
@@ -80,12 +84,15 @@ float_obj_X_end_r_array[-2] = -1.57
 float_obj_X_end_array = float_obj_X_end_r_array[:3] + euler2quat(float_obj_X_end_r_array[3:]).tolist()
 float_obj_X_end = get_transform(float_obj_X_end_array)
 
-# Configuration space boundaries
+# Configuration space boundaries - use quaternions of initial and end poses, plus some buffer
 # pose_lower = np.array([-0.1, -0.2, -0.2, -3, -3, -3])
 # pose_upper = np.array([ 0.1,  0.2,  0.2,  3,  3,  3])
 pose_lower = np.array([-0.1, -0.2, -0.2,  -1, -1, -1, -1])
 pose_upper = np.array([ 0.1,  0.2,  0.2,  1,  1,  1,  1])
-collision_threshold = 0.003 # slow
+q_min = np.minimum(float_obj_X_init_array[3:], float_obj_X_end_array[3:]) - q_bound_buffer
+q_max = np.maximum(float_obj_X_init_array[3:], float_obj_X_end_array[3:]) + q_bound_buffer
+pose_lower[3:] = q_min
+pose_upper[3:] = q_max
 
 # Visualize the final scene
 scene_end = trimesh.scene.scene.Scene()
@@ -183,6 +190,8 @@ for X_ind, X in enumerate(path):
 # Result
 print('Number of points before interpolation: ', len(path))
 print('Number of points after interpolation: ', len(path_full))
+print('Quaternion lower bound:', pose_lower[3:])
+print('Quaternion upper bound:', pose_upper[3:])
 # print('Path after interpolation: ', path_full)
 # print('Position trajectory after interpolation: ', [path[:3] for path in path_full])
 # print('Quaternion (w,x,y,z) trajectory after interpolation: ', [path[3:] for path in path_full])
