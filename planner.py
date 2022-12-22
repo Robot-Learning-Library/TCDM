@@ -4,7 +4,7 @@ from planner.util.geometry import get_transform
 from planner.rrt_star_bid import RRTStarBidirectional
 from planner.search_space import SearchSpace
 
-from tcdm.util.geom import quat2euler
+from tcdm.util.geom import quat2euler, euler2quat
 
 import scipy.interpolate as interpolate
 from scipy.spatial.transform import Slerp
@@ -16,10 +16,11 @@ from scipy.spatial.transform import Rotation as R
 # naming convention：
 # X: 6-dim tuple with 3D position and 3D Euler angle (XYZ extrinsic)
 # p: 3-dim position
-# r: 3-dim Euler angle
+# r: 3-dim Euler angle (XYZ intrinsic convention, 'rxyz' in trimesh, 'XYZ' in scipy)
 # q: 4-dim quaternion in (x,y,z,w) - scipy convention
 #! mujoco/tcdm uses (w,x,y,z) convention
 # R: scipy rotation object
+
 
 def interpolate_pos(p_init, p_end, num_point):
     f = interpolate.interp1d(
@@ -36,8 +37,8 @@ def interpolate_quat(R_init, R_end, num_point):
     f = Slerp([0, num_point-1], quats)
 
     x_new = np.arange(0, num_point, 1)
-    y_new = f(x_new).as_euler('xyz', degrees=False)
-    # y_new = f(x_new).as_quat()
+    # y_new = f(x_new).as_euler('XYZ', degrees=False)
+    y_new = f(x_new).as_quat()
     return x_new, y_new
 
 
@@ -62,26 +63,28 @@ float_obj = trimesh.load(float_obj_path)
 
 z_offset = 0.2
 # Initial pose of the target and float objects - x,y,z,r,p,y - Euler extrinsic XYZ convention
-float_obj_X_init_array = [0.01895152, -0.01185687, -0.17970488, -3.05750797, 0.08599904, -1.99028331]  # from banana_pass1.npz
+float_obj_X_init_r_array = [0.01895152, -0.01185687, -0.17970488, -3.05750797, 0.08599904, -1.99028331]  # from banana_pass1.npz
+float_obj_X_init_array = float_obj_X_init_r_array[:3] + euler2quat(float_obj_X_init_r_array[3:]).tolist()   # convert to quat (w,x,y,z)
 # float_obj_X_init_array = [0.05, 0.0, 0-0.2+0.023, 0.0, 0.0, 0.0]  # account for 20cm offset in z when loading objects in tcdm
 # target_obj_X_array = [-0.02, -0.165, 0-z_offset+0.04, 0.0, 0.0, 0.0]
-target_obj_X_array = [-0.2, -0.165, 0-z_offset+0.04, 0.0, 0.0, 0.0]  # avoid collision with the cup
+target_obj_X_array_r_array = [-0.2, -0.165, 0-z_offset+0.04, 0.0, 0.0, 0.0]  # avoid collision with the cup
+target_obj_X_array = target_obj_X_array_r_array[:3] + euler2quat(target_obj_X_array_r_array[3:]).tolist()
 float_obj_X_init = get_transform(float_obj_X_init_array)
 target_obj_X = get_transform(target_obj_X_array)
 
-# Final pose of the float object - needs to manually specify right now - assume collision free with the target
-# float_obj_X_end_array = [-0.02, -0.175, 0.13-z_offset+0.023, 0.0, -1.57, 0.0]
-# float_obj_X_end_array = [-0.02, -0.175, 0.13-z_offset+0.023, 0.0, -1.57, 0.0]
-float_obj_X_end_array = target_obj_X_array.copy()
-float_obj_X_end_array[1] -= 0.01 
-float_obj_X_end_array[2] += 0.149
-float_obj_X_end_array[-2] = -1.57
-
+# Final pose of the float object
+float_obj_X_end_r_array = target_obj_X_array_r_array.copy()
+float_obj_X_end_r_array[1] -= 0.01 
+float_obj_X_end_r_array[2] += 0.149
+float_obj_X_end_r_array[-2] = -1.57
+float_obj_X_end_array = float_obj_X_end_r_array[:3] + euler2quat(float_obj_X_end_r_array[3:]).tolist()
 float_obj_X_end = get_transform(float_obj_X_end_array)
 
 # Configuration space boundaries
-pose_lower = np.array([-0.1, -0.2, -0.2, -1, -2, -2])
-pose_upper = np.array([ 0.1,  0.2,  0.2,  1,  2,  2])
+# pose_lower = np.array([-0.1, -0.2, -0.2, -3, -3, -3])
+# pose_upper = np.array([ 0.1,  0.2,  0.2,  3,  3,  3])
+pose_lower = np.array([-0.1, -0.2, -0.2, -1, -1, -1, -1])
+pose_upper = np.array([ 0.1,  0.2,  0.2,  1,  1,  1,  1])
 collision_threshold = 0.003 # slow
 
 # Visualize the final scene
@@ -134,8 +137,11 @@ for X in path:
 scene_planned.show()
 
 # Interpolate
-p_interp_threshold = 0.02 # 3cm in space
-p_interp_dist = 0.015
+p_interp_threshold = 0.015
+q_interp_threshold = 0.1  # not using
+p_interp_dist = 0.01
+q_interp_dist = 0.05
+
 path_full = []
 for X_ind, X in enumerate(path):
     if X_ind == 0:
@@ -143,25 +149,31 @@ for X_ind, X in enumerate(path):
 
     # Check if interp
     p_norm_diff = np.linalg.norm(np.array(X[:3]) - np.array(prev_X[:3]))
-    euler_norm_diff = np.linalg.norm(np.array(X[3:]) - np.array(prev_X[3:]))
-    if p_norm_diff > p_interp_threshold:
-        
+    q_norm_diff = np.linalg.norm(np.array(X[3:]) - np.array(prev_X[3:]))
+    if p_norm_diff > p_interp_threshold or q_norm_diff > q_interp_threshold:
+    # if p_norm_diff > p_interp_threshold:
+
         # Figure out number of interp points
-        num_point = p_norm_diff // p_interp_dist + 1
+        # num_point = int(p_norm_diff/p_interp_dist) + 1
+        num_point = max(int(p_norm_diff/p_interp_dist) + 1, int(q_norm_diff/q_interp_dist) + 1)
         print(f'Interpolating {num_point} points!')
 
         # Interp position and orientation separately
         _, p_interp_all = interpolate_pos(prev_X[:3], X[:3], num_point)
-        _, r_interp_all = interpolate_quat(
-            R.from_euler(seq='XYZ', angles=prev_X[3:], degrees=False),
-            R.from_euler(seq='XYZ', angles=X[3:], degrees=False),
+        # _, r_interp_all = interpolate_quat(
+        #     R.from_euler(seq='XYZ', angles=prev_X[3:], degrees=False),
+        #     R.from_euler(seq='XYZ', angles=X[3:], degrees=False),
+        #     num_point)
+        _, q_interp_all = interpolate_quat(
+            R.from_quat(list(prev_X[4:])+[prev_X[3]]),  # convert (w,x,y,z) to (x,y,z,w) for scipy rotation
+            R.from_quat(list(X[4:])+[X[3]]),
             num_point)
 
         # Do not add the first one since that's prev
-        for p_ind, (p_interp, r_interp) in enumerate(zip(p_interp_all, r_interp_all)):
+        for p_ind, (p_interp, q_interp) in enumerate(zip(p_interp_all, q_interp_all)):
             if p_ind == 0:
                 continue
-            path_full += [tuple(list(p_interp)+list(r_interp))]
+            path_full += [tuple(list(p_interp)+[q_interp[-1]]+list(q_interp[:3]))]  # convert back to (w,x,y,z)
     else:
         path_full += [X]
 
@@ -169,10 +181,11 @@ for X_ind, X in enumerate(path):
     prev_X = X
 
 # Result
-print('Path after interpolation: ', path_full)
-print('Position trajectory after interpolation: ', [path[:3] for path in path_full])
-# print('Quaternion (x,y,z,w) trajectory after interpolation: ', [path[3:] for path in path_full])
-print('Euler trajectory after interpolation: ', [path[3:] for path in path_full])
+print('Number of points before interpolation: ', len(path))
+print('Number of points after interpolation: ', len(path_full))
+# print('Path after interpolation: ', path_full)
+# print('Position trajectory after interpolation: ', [path[:3] for path in path_full])
+# print('Quaternion (w,x,y,z) trajectory after interpolation: ', [path[3:] for path in path_full])
 
 # Visualize the final scene with interpolation
 scene_planned = trimesh.scene.scene.Scene()
@@ -181,14 +194,14 @@ for X in path_full:
     scene_planned.add_geometry(float_obj, transform=get_transform(X))
 scene_planned.show()
 
-# Convert
+# Convert - mujoco uses (w,x,y,z)
 translation_tcdm = []
 orientation_tcdm = []
 for path in path_full:
     translation_tcdm += [path[:3]]
-    q = R.from_euler(seq='XYZ', angles=path[3:], degrees=False).as_quat()
-    orientation_tcdm += [tuple([q[-1]]+list(q[:3]))]  # (x,y,z,w) -> (w,x,y,z)
-print('Quaternion (w,x,y,z) trajectory after interpolation: ', orientation_tcdm)
+    # q = R.from_euler(seq='XYZ', angles=path[3:], degrees=False).as_quat()
+    # orientation_tcdm += [tuple([q[-1]]+list(q[:3]))]  # (x,y,z,w) -> (w,x,y,z)
+    orientation_tcdm += [path[3:]]
 
 # Save trajectory
 def load_motion(motion_file):

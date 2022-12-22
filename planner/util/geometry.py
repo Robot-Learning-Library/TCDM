@@ -9,7 +9,8 @@ import numpy as np
 def get_transform(pos_euler):
     pos = pos_euler[:3]
     euler = pos_euler[3:]
-    transform = trimesh.transformations.euler_matrix(euler[0], euler[1], euler[2], 'rxyz') # s for extrinsic, r for intrinsic, returns 4x4; mujoco uses rxyz
+    # transform = trimesh.transformations.euler_matrix(euler[0], euler[1], euler[2], 'rxyz') # s for extrinsic, r for intrinsic, returns 4x4; mujoco uses rxyz
+    transform = trimesh.transformations.quaternion_matrix(euler)
     transform[:3, -1] = pos
     return transform
 
