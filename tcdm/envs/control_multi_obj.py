@@ -23,6 +23,7 @@ class GeneralReferenceMotionMultiObjectTask(SingleObjectTask):
         self.target_object_poses = target_object_poses
         self.objects_manipulation_seq = objects_manipulation_seq
         self.switch_num = 0 
+        self.switch_num_max = len(self.objects_manipulation_seq)-1 if self.objects_manipulation_seq is not None else len(self.object_names)-1
         self.curr_obj_idx = self.switch_num if self.objects_manipulation_seq is None else self.objects_manipulation_seq[0]
         self.reference_motion = reference_motion  # this is the first reference motion
         self._init_key = init_key
@@ -51,10 +52,10 @@ class GeneralReferenceMotionMultiObjectTask(SingleObjectTask):
     
     def check_switch(self):
         # TODO
-        if self.curr_obj_idx >= len(self.objects_manipulation_seq):
-            return False
-        else:
+        if self.reference_motion.next_done:
             return True
+        else:
+            return False
 
     @property
     def substeps(self):
@@ -162,7 +163,7 @@ class GeneralReferenceMotionMultiObjectTask(SingleObjectTask):
         switched = self.switch_obj(physics)
 
     def get_termination(self, physics):
-        if self.reference_motion.next_done:
+        if self.reference_motion.next_done and self.switch_num == self.switch_num_max:
             return 0.0
         return super().get_termination(physics)
 
