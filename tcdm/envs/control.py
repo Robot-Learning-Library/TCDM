@@ -192,8 +192,8 @@ class SingleObjectTask(Task):
 #         self._object_names = object_names
 #         super().__init__(reward_fns, reward_weights=reward_weights, random=random)
     
-#     def get_observation(self, physics):
-#         obs = super().get_observation(physics)
+#     def get_observation(self, physics, obj_idx):
+#         obs = super().get_observation(physics, obj_idx)
 #         base_pos = obs['position']
 #         base_vel = obs['velocity']
 
@@ -260,6 +260,7 @@ class ReferenceMotionTask(SingleObjectTask):
         obs['goal'] = self.reference_motion.goals.astype(np.float32)
         obs['state'] = np.concatenate((obs['state'], obs['goal']))
         return obs
+
 
 class GeneralReferenceMotionTask(SingleObjectTask):
     def __init__(self, reference_motion, reward_fns, init_key, data_path, ref_only, auto_ref, task_name, object_name, traj_path,
@@ -448,14 +449,3 @@ class GeneralReferenceMotionTask(SingleObjectTask):
                 return 0.0
 
         return super().get_termination(physics)
-
-    # def get_observation(self, physics):
-    #     obs = super().get_observation(physics)
-    #     obs['goal'] = self.reference_motion.goals.astype(np.float32)
-    #     # offset = [0.8, 0, 0]
-    #     obs['goal'][4::7] -= self.offset[0]  # shape (7,3), 7=4(oritentation)+3(position), 3=(1,5,10)
-    #     obs['goal'][5::7] -= self.offset[1]
-    #     obs['goal'][6::7] -= self.offset[2]
-    #     print(obs['goal'].shape, obs['goal'])
-    #     obs['state'] = np.concatenate((obs['state'], obs['goal']))
-    #     return obs  

@@ -2,9 +2,9 @@ import trimesh
 import copy
 import numpy as np
 import os
-from tcdm.planner.util.geometry import get_transform
-from tcdm.planner.rrt_star_bid import RRTStarBidirectional
-from tcdm.planner.search_space import SearchSpace
+from planner.util.geometry import get_transform
+from planner.rrt_star_bid import RRTStarBidirectional
+from planner.search_space import SearchSpace
 
 from tcdm.util.geom import quat2euler, euler2quat
 
