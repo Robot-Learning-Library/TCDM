@@ -8,7 +8,7 @@ import yaml, cv2
 import numpy as np
 from dm_control import mjcf
 from tcdm.envs import asset_abspath
-from tcdm.motion_util import PoseAndVelocity
+from tcdm.util.motion import PoseAndVelocity
 # from mujoco_py.const import EQ_WELD
 
 

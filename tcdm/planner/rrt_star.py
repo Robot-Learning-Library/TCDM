@@ -2,8 +2,8 @@
 # file 'LICENSE', which is part of this source code package.
 from operator import itemgetter
 
-from planner.heuristics import cost_to_go, segment_cost, path_cost
-from planner.rrt import RRT
+from tcdm.planner.heuristics import cost_to_go, segment_cost, path_cost
+from tcdm.planner.rrt import RRT
 
 
 class RRTStar(RRT):

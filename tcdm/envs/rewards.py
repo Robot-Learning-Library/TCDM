@@ -7,7 +7,7 @@
 import abc
 import copy
 import numpy as np
-from tcdm.motion_util import rotation_distance
+from tcdm.util.motion import rotation_distance
 
 
 def get_reward(name):

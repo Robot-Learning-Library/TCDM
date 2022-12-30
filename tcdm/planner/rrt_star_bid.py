@@ -3,8 +3,8 @@
 
 import random
 
-from planner.heuristics import path_cost
-from planner.rrt_star import RRTStar
+from tcdm.planner.heuristics import path_cost
+from tcdm.planner.rrt_star import RRTStar
 
 
 class RRTStarBidirectional(RRTStar):

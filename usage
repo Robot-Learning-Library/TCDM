@@ -13,7 +13,7 @@ train with pretrained cup:
 python rollout.py --save_folder outputs/2022-11-25/03-45-35  --render
 
 multiple object task banana_cup_pass1
-python visualize.py --save_folder arbitrary_traj_agents/banana_cup_pass1
+python visualize.py --save_folder new_agents/banana_cup_pass1
 
 generete video for original trajectory:
 python generate_traj_video.py --render --env hammer_use1
@@ -22,4 +22,4 @@ python generate_traj_video.py --render --env all
 
 # multiple objects manipulation
 python planner.py
-python rollout.py --save_folder arbitrary_traj_agents/banana_cup_pass1 --checkpoint outputs/2022-11-06/12-00-55 --traj_path trajectories/multi_trajs --render
+python rollout.py --save_folder new_agents/banana_cup_pass1 --checkpoint outputs/2022-11-06/12-00-55 --traj_path trajectories/multi_trajs --render

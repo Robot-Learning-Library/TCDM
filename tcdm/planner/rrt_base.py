@@ -2,7 +2,7 @@ import random
 from rtree import index
 import numpy as np
 
-from planner.util.geometry import steer
+from tcdm.planner.util.geometry import steer
 
 
 class Tree(object):
@@ -41,11 +41,13 @@ class RRTBase(object):
         self.trees = []  # list of all trees
         self.add_tree()  # add initial tree
 
+
     def add_tree(self):
         """
         Create an empty tree and add to trees
         """
         self.trees.append(Tree(self.X))
+
 
     def add_vertex(self, tree, v):
         """
@@ -57,6 +59,7 @@ class RRTBase(object):
         self.trees[tree].V_count += 1  # increment number of vertices in tree
         self.samples_taken += 1  # increment number of samples taken
 
+
     def add_edge(self, tree, child, parent):
         """
         Add edge to corresponding tree
@@ -65,6 +68,7 @@ class RRTBase(object):
         :param parent: tuple, parent vertex
         """
         self.trees[tree].E[child] = parent
+
 
     def nearby(self, tree, x, n):
         """
@@ -76,6 +80,7 @@ class RRTBase(object):
         """
         return self.trees[tree].V.nearest(x, num_results=n, objects="raw")
 
+
     def get_nearest(self, tree, x):
         """
         Return vertex nearest to x
@@ -84,6 +89,7 @@ class RRTBase(object):
         :return: tuple, nearest vertex to x
         """
         return next(self.nearby(tree, x, 1))
+
 
     def new_and_near(self, tree, q):
         """
@@ -101,6 +107,7 @@ class RRTBase(object):
         self.samples_taken += 1
         return x_new, x_nearest
 
+
     def connect_to_point(self, tree, x_a, x_b):
         """
         Connect vertex x_a in tree to vertex x_b
@@ -114,6 +121,7 @@ class RRTBase(object):
             self.add_edge(tree, x_b, x_a)
             return True
         return False
+
 
     def can_connect_to_goal(self, tree):
         """
@@ -129,6 +137,7 @@ class RRTBase(object):
             return True
         return False
 
+
     def get_path(self):
         """
         Return path through tree from start to goal
@@ -141,6 +150,7 @@ class RRTBase(object):
         print("Could not connect to goal")
         return None
 
+
     def connect_to_goal(self, tree):
         """
         Connect x_goal to graph
@@ -149,6 +159,7 @@ class RRTBase(object):
         """
         x_nearest = self.get_nearest(tree, self.x_goal)
         self.trees[tree].E[self.x_goal] = x_nearest
+
 
     def reconstruct_path(self, tree, x_init, x_goal):
         """
@@ -169,6 +180,7 @@ class RRTBase(object):
         path.reverse()
         return path
 
+
     def check_solution(self):
         # probabilistically check if solution found
         if self.prc and random.random() < self.prc:
@@ -180,6 +192,7 @@ class RRTBase(object):
         if self.samples_taken >= self.max_samples:
             return True, self.get_path()
         return False, None
+
 
     def bound_point(self, point):
         # if point is out-of-bounds, set to bound

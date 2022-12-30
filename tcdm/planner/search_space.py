@@ -4,13 +4,16 @@
 import numpy as np
 # from rtree import index
 
-from planner.util.geometry import es_points_along_line, get_transform
-# from planner.util.obstacle_generation import obstacle_generator
+from tcdm.planner.util.geometry import es_points_along_line, get_transform
+# from tcdm.planner.util.obstacle_generation import obstacle_generator
 
 
 class SearchSpace(object):
-    # def __init__(self, dimension_lengths, O=None):
-    def __init__(self, dimension_lengths, collision_checker, collision_threshold=0.005):
+    def __init__(self, dimension_lengths, 
+                       collision_checker, 
+                       collision_threshold=0.005, 
+                       float_obj_idx=1, 
+                       ignore_collision_obj_idx_all=[]):
         """
         Initialize Search Space
         :param dimension_lengths: range of each dimension
@@ -40,6 +43,8 @@ class SearchSpace(object):
         #     self.obs = index.Index(obstacle_generator(O), interleaved=True, properties=p)
         self.collision_checker = collision_checker
         self.collision_threshold = collision_threshold
+        self.float_obj_idx = float_obj_idx  # for changing flaoting object transform
+        self.ignore_collision_obj_idx_all = ignore_collision_obj_idx_all
         
 
     def obstacle_free(self, x):
@@ -48,10 +53,14 @@ class SearchSpace(object):
         :param x: location to check
         :return: True if not inside an obstacle, False otherwise
         """
-        self.collision_checker.set_transform('float', get_transform(x))
+        self.collision_checker.set_transform(str(self.float_obj_idx), get_transform(x))
+        # ignore collision by moving it far
+        for obj_idx in self.ignore_collision_obj_idx_all:
+            self.collision_checker.set_transform(str(obj_idx), get_transform([1,1,1,1,0,0,0]))
         return not self.collision_checker.in_collision_internal()
         # return self.collision_checker.min_distance_internal() > self.collision_threshold
         # return self.obs.count(x) == 0
+
 
     def sample_free(self):
         """
@@ -62,6 +71,7 @@ class SearchSpace(object):
             x = self.sample()
             if self.obstacle_free(x):
                 return x
+
 
     def collision_free(self, start, end, r):
         """
@@ -74,6 +84,7 @@ class SearchSpace(object):
         points = es_points_along_line(start, end, r)
         coll_free = all(map(self.obstacle_free, points))
         return coll_free
+
 
     def sample(self):
         """

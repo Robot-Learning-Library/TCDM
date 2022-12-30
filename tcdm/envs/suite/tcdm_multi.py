@@ -8,7 +8,7 @@ import numpy as np
 from tcdm.envs import mj_models, traj_abspath, generated_traj_abspath
 from dm_control.utils import containers
 from tcdm.envs.control import Environment
-from tcdm.envs.suite.tcdm import ObjMimicTask
+from tcdm.envs.suite.tcdm import ObjMimicTask, ObjMimicSwitchTask
 from tcdm.envs.suite.tcdm_obj_only import ObjOnlyMimicTask
 from tcdm.envs.mujoco import physics_from_mjcf
 
@@ -22,6 +22,7 @@ class MultiObjOnlyMimicTask(ObjOnlyMimicTask):
                        ref_only, auto_ref, task_name, traj_path)
         self._multi_obj = True
 
+
 class MultiObjMimicTask(ObjMimicTask):
     """Right now, assume two objects, and one object is fixed."""
 
@@ -30,8 +31,35 @@ class MultiObjMimicTask(ObjMimicTask):
         super().__init__(object_name, data_path, reward_kwargs, append_time, pregrasp_init_key, ref_only, auto_ref, task_name, traj_path)
         self._multi_obj = True
 
-def _multi_obj_mimic_task_factory(env_name, object_class_list, robot_class):
-    def task(append_time=True, pregrasp='initialized', ref_only=False, auto_ref=False, traj_path=None, reward_kwargs={}, environment_kwargs={}):
+
+class MultiObjMimicSwitchTask(ObjMimicSwitchTask):
+    """Right now, assume two objects, and one object is fixed."""
+
+    def __init__(self, object_name, 
+                       data_path, 
+                       reward_kwargs, 
+                       append_time, 
+                       pregrasp_init_key, 
+                       ref_only,
+                       float_obj_seq,
+                       target_obj_Xs,
+                       traj_folder,
+                       use_saved_traj,
+                       ):
+        super().__init__(object_name, 
+                         data_path, 
+                         reward_kwargs, 
+                         append_time, 
+                         pregrasp_init_key,
+                         ref_only,
+                         float_obj_seq,
+                         target_obj_Xs,
+                         traj_folder,
+                         use_saved_traj,
+                         )
+
+def _multi_obj_mimic_task_factory(env_name, object_class_list, robot_class, switch=False, task_kwargs={}):
+    def task(append_time=True, pregrasp='initialized', ref_only=False, auto_ref=False, traj_path=None, reward_kwargs={}, environment_kwargs={}, **kwargs):
         """
         ref_only: only visualize object reference trajectory, the hand is hanging
         auto_ref: automatically generate reference trajectory at the start of each episode
@@ -41,34 +69,46 @@ def _multi_obj_mimic_task_factory(env_name, object_class_list, robot_class):
         if robot_class:
             env.attach(robot_class(limp=False))
 
-        # object_model = object1_class()
-        # object_name = '{}/object'.format(object_model.mjcf_model.model)
-        # env.attach(object_model)
-
-        # load objects
+        # load all objects
         object_model_list = []
         for object_class in object_class_list:
             object_model = object_class()
             env.attach(object_model)
             object_model_list.append(object_model)
-        first_object_name = '{}/object'.format(object_model_list[0].mjcf_model.model)
+        object_name_all = ['{}/object'.format(object_model.mjcf_model.model) for object_model in object_model_list]
 
+        # find path to first trajectory
         env_name_ = env_name.replace('-', '_')
         if traj_path is None:
-            data_path = traj_abspath(env_name_+'.npz', traj_path='trajectories/multi_trajs')
+            data_path = traj_abspath('traj_0.npz', traj_path='new_agents/'+env_name_)
         else:
             data_path = generated_traj_abspath(env_name_+'.npz', traj_path, env_name_)
 
+        # build task
         if robot_class:
-            task_class = MultiObjMimicTask
+            if switch:
+                task = MultiObjMimicSwitchTask(object_name_all, 
+                                               data_path, 
+                                               reward_kwargs, 
+                                               append_time, 
+                                               pregrasp,
+                                               ref_only,
+                                               task_kwargs['float_obj_seq'],
+                                               task_kwargs['target_obj_Xs'],
+                                               'new_agents/'+env_name_,
+                                               task_kwargs['use_saved_traj'],
+                            )
+            else:
+                task = MultiObjMimicTask(object_name_all[0], data_path, reward_kwargs, append_time, pregrasp, ref_only, auto_ref, env_name, traj_path)
         else:
-            task_class = MultiObjOnlyMimicTask
-        task = task_class(first_object_name, data_path, reward_kwargs, append_time, pregrasp, ref_only, auto_ref, env_name, traj_path)
+            task = MultiObjOnlyMimicTask(object_name_all[0], data_path, reward_kwargs, append_time, pregrasp, ref_only, auto_ref, env_name, traj_path)
+
         # build physics object and create environment
         if ref_only:
             gravity_compensation_for_all = True
         else:  
             gravity_compensation_for_all = False
+
         # build physics object and create environment
         physics = physics_from_mjcf(env, gravity_compensation_for_all=gravity_compensation_for_all)
         return Environment(physics, task,
@@ -79,12 +119,8 @@ def _multi_obj_mimic_task_factory(env_name, object_class_list, robot_class):
     return task
 
 
-def get_domain_multi(env_name, obj_only=False):
-    # with open(asset_abspath('multi_task_trajs.yaml'), 'r') as g:
-    #     _TCDM_TRAJS = yaml.safe_load(g)['obj_mimic']
-
+def get_domain_multi(env_name, obj_only=False, switch=False, task_kwargs={}):
     obj_names = env_name.split('-')[0:-1]  # e.g., *-*-pass
-
     object_class_list = []
     for obj_name in obj_names:
         object_class = mj_models.get_object(obj_name)
@@ -94,7 +130,7 @@ def get_domain_multi(env_name, obj_only=False):
         robot_class = None
     else:
         robot_class = mj_models.Adroit
-    task = _multi_obj_mimic_task_factory(env_name, object_class_list, robot_class)
+    task = _multi_obj_mimic_task_factory(env_name, object_class_list, robot_class, switch, task_kwargs)
     domain = containers.TaggedTasks()
     domain.add('mimic')(task)
 

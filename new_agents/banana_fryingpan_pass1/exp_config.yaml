@@ -29,8 +29,11 @@ defaults:
   agent: ppo
   env: pgdm
 env:
+  #!
   multi_obj: True
   obj_only: False
+  switch: True
+  #1
   env_kwargs: {}
   info_keywords:
   - obj_err
@@ -39,9 +42,16 @@ env:
   - time_frac
   - obj_err_scale
   n_envs: ${n_envs}
-  name: banana-cup-pass1
+  name: banana-fryingpan-pass1
   state_keyword: state
   task_kwargs:
+    #!
+    ref_only: True
+    float_obj_seq: [0,1]
+    use_saved_traj: False
+    target_obj_Xs: [[-0.028693, 0.08177, 0.04143, -3.05750797, 0.08599904, -0.99028331],
+                    [0.001307, 0.03177, 0.2257, 0.20487, 0.20835, -0.8584]]
+    #!
     append_time: true
     pregrasp: motion_planned
     reward_kwargs:

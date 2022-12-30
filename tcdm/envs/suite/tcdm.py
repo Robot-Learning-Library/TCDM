@@ -10,6 +10,7 @@ from tcdm.envs import mj_models, traj_abspath, generated_traj_abspath
 from tcdm.envs import asset_abspath
 from dm_control.utils import containers
 from tcdm.envs.control import Environment, ReferenceMotionTask, GeneralReferenceMotionTask
+from tcdm.envs.control_switch import GeneralReferenceMotionSwitchTask
 from tcdm.envs.reference import HandObjectReferenceMotion
 from tcdm.envs.rewards import ObjectMimic
 from tcdm.envs.mujoco import physics_from_mjcf
@@ -37,6 +38,47 @@ class ObjMimicTask(GeneralReferenceMotionTask):
         return obs
 
 
+class ObjMimicSwitchTask(GeneralReferenceMotionSwitchTask):
+    def __init__(self, object_names, 
+                       data_path, 
+                       reward_kwargs, 
+                       append_time, 
+                       pregrasp_init_key, 
+                       ref_only,
+                       float_obj_seq,
+                       target_obj_Xs, 
+                       traj_folder,
+                       use_saved_traj,
+                       ):
+        # first trajectory
+        reference_motion = HandObjectReferenceMotion(object_names[0], data_path)
+        reward_fn = ObjectMimic(**reward_kwargs)
+        self._append_time = append_time
+        super().__init__(reference_motion, 
+                         [reward_fn], 
+                         pregrasp_init_key, 
+                         object_names,
+                         ref_only,
+                         float_obj_seq,
+                         target_obj_Xs,
+                         traj_folder,
+                         use_saved_traj,
+                         )
+
+
+    def get_observation(self, physics):
+        obs = super().get_observation(physics)
+        
+        # append time to observation if needed
+        if self._append_time:
+            t = self.reference_motion.time
+            t = np.array([1, 4, 6, 8]) * t
+            t = np.concatenate((np.sin(t), np.cos(t)))
+            obs['state'] = np.concatenate((obs['state'], t))
+        return obs
+
+    
+    
 class Sim2RealMimicTask(ObjMimicTask):
     def initialize_episode(self, physics):
         friction = [self.U(0.3, 0.7), self.U(0.0001,0.005), self.U(0.00001,0.0002)]

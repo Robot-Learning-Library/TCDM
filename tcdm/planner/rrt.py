@@ -1,4 +1,4 @@
-from planner.rrt_base import RRTBase
+from tcdm.planner.rrt_base import RRTBase
 
 
 class RRT(RRTBase):

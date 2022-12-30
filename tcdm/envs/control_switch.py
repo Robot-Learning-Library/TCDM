@@ -3,59 +3,84 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-
 import numpy as np
-import copy, collections
-from dm_env import specs
-from dm_control.rl import control # https://github.com/deepmind/dm_control/blob/main/dm_control/rl/control.py
-from tcdm.envs.reference import HandObjectReferenceMotion, random_generate_ref
-from tcdm.envs import generated_traj_abspath
+import copy
+
+from tcdm.envs.reference import HandObjectReferenceMotion
 from tcdm.util.geom import quat2euler
 from tcdm.envs.control import Task, SingleObjectTask, _normalize_action, _denormalize_action
-from tcdm.planner_util import motion_plan_one_obj
+from tcdm.planner.generate import motion_plan_one_obj
 
-class GeneralReferenceMotionMultiObjectTask(SingleObjectTask):
-    def __init__(self, reference_motion, reward_fns, init_key, data_path, task_name, object_names, traj_path,
-                      reward_weights=None, random=None):
-        self.task_name = task_name
-        self.object_names = object_names
-        # self.ini_object_poses = ini_object_poses
-        self.target_object_poses = target_object_poses
-        self.objects_manipulation_seq = objects_manipulation_seq
+
+class GeneralReferenceMotionSwitchTask(SingleObjectTask):
+    def __init__(self, reference_motion, 
+                       reward_fns, 
+                       init_key, 
+                       obj_names,
+                       ref_only,
+                       float_obj_seq,
+                       target_obj_Xs,
+                       traj_folder='new_agents/banana_fryingpan_pass1',
+                       use_saved_traj=False, 
+                       reward_weights=None,
+                    #    random=None
+                       ):
+        self.target_obj_Xs = target_obj_Xs
+        self.float_obj_seq = float_obj_seq
         self.switch_num = 0 
-        self.switch_num_max = len(self.objects_manipulation_seq)-1 if self.objects_manipulation_seq is not None else len(self.object_names)-1
-        self.curr_obj_idx = self.switch_num if self.objects_manipulation_seq is None else self.objects_manipulation_seq[0]
+        self.switch_num_max = len(self.float_obj_seq)-1 if self.float_obj_seq is not None else len(self.obj_names)-1
+        self.curr_float_obj_idx = self.switch_num if self.float_obj_seq is None else self.float_obj_seq[0]
+        self.traj_folder = traj_folder
+        self.use_saved_traj = use_saved_traj
+
+        self.ref_only = ref_only
+        self.obj_names = obj_names
         self.reference_motion = reference_motion  # this is the first reference motion
         self._init_key = init_key
-        super().__init__(task_name, reward_fns, reward_weights, random)
+        self.z_global_local_offset = -0.2
+        
+        # TODO: ???
+        self.offset = np.zeros((3))
+
+        super().__init__(obj_names[0], reward_fns, reward_weights, random=None)
+
 
     def switch_obj(self, physics):
-        if self.check_switch():
+        switch = self.check_switch()
+        if switch:
+            if self.switch_num == self.switch_num_max:   # terminate episode
+                return False
             self.switch_num += 1
-            if self.objects_manipulation_seq is None:
-                self.curr_obj_idx = self.switch_num
+            if self.float_obj_seq is None:
+                self.curr_float_obj_idx = self.switch_num
             else:
-                self.curr_obj_idx = self.objects_manipulation_seq[self.switch_num]
-            object_name = self.objects_manipulation_seq[self.curr_obj_idx]
-            traj_path = f'./trajectories/multi_trajs/{self.task_name}/traj{self.switch_num}.npz'
-            obj_poses = physics.data.qpos[30:].reshape(-1, 6)  # get current object poses
-            traj, _ = motion_plan_one_obj(
-                obj_list = self.object_names, 
-                manipulated_obj_idx=self.curr_obj_idx, 
-                obj_poses=obj_poses, 
-                manipulated_obs_target_pose=self.target_object_poses[self.curr_obj_idx], 
-                traj_path=traj_path) # save ref traj to file
+                self.curr_float_obj_idx = self.float_obj_seq[self.switch_num]
+            object_name = self.float_obj_seq[self.curr_float_obj_idx]
+
+            traj_path = f'./{self.traj_folder}/traj_{self.switch_num}.npz'
+            if not self.use_saved_traj:
+                cur_qpos = physics.data.qpos[30:].reshape(-1, 6)
+                cur_qpos[:, 2] += -self.z_global_local_offset   # local to global...
+                traj, _ = motion_plan_one_obj(
+                    obj_list=[name.split('/')[0] for name in self.obj_names], 
+                    float_obj_idx=self.curr_float_obj_idx, 
+                    obj_Xs=cur_qpos.tolist(),  # get current object poses
+                    float_obj_target_X=self.target_obj_Xs[self.curr_float_obj_idx], 
+                    save_path=traj_path,
+                    ignore_collision_obj_idx_all=[idx for idx in range(len(self.obj_names)) if idx != self.curr_float_obj_idx],  # ignore collision with all other objects
+                    visualize=True) # TODO: cfg for visualize
+
+            # TODO: directly pass trajectory instead of saving to file
             self.reference_motion = HandObjectReferenceMotion(object_name, traj_path)
-            return True
-        else:
-            return False
-    
+            
+            # Reset step
+            self._step_count = 0
+        return switch
+
+
     def check_switch(self):
-        # TODO
-        if self.reference_motion.next_done:
-            return True
-        else:
-            return False
+        return self.reference_motion.next_done
+
 
     @property
     def substeps(self):
@@ -63,8 +88,9 @@ class GeneralReferenceMotionMultiObjectTask(SingleObjectTask):
         # print('substeps: ', substeps)
         return substeps
 
+
     def get_observation(self, physics):
-        obs = Task.get_observation(self, physics, self.curr_obj_idx)  # obj_idx specifies which object to get observation
+        obs = Task.get_observation(self, physics, self.curr_float_obj_idx)  # obj_idx specifies which object to get observation
         base_pos = obs['position']
         base_vel = obs['velocity']
 
@@ -110,32 +136,32 @@ class GeneralReferenceMotionMultiObjectTask(SingleObjectTask):
         obs['goal'][5::7] -= self.offset[1]
         obs['goal'][6::7] -= self.offset[2]
         obs['state'] = np.concatenate((obs['state'], obs['goal']))
-        obs['current_object_idx'] = self.current_object_idx  # get the current object index
+        obs['current_float_obj_idx'] = self.curr_float_obj_idx  # get the current object index
         return obs
 
-    def initialize_episode(self, physics):
 
-        #! This works for now for running visualization but not sure if the correct practice
+    def initialize_episode(self, physics):
+        # This works for now for running visualization but not sure if the correct practice
         self._step_count = 0
 
         self.additional_step_cnt = 0 # step after the reference motion is done
         self.additional_step = False # whether to step after the reference motion is done
-        # if self.auto_ref:
-        #     new_ref = self._generate_reference_motion()
-        #     self.reference_motion = new_ref
         start_state = self.reference_motion.reset()[self._init_key]  # _init_key='motion_planned'
         self.start_state = start_state
+        
         with physics.reset_context():
             # hand
             physics.data.qpos[:30] = start_state['position']
             physics.data.qvel[:30] = start_state['velocity']
 
             # other objects
-            for i, obj_name in enumerate(self.object_names):
+            for i, obj_name in enumerate(self.obj_names):
                 physics.data.qpos[30+6*i:36+6*i] = start_state[str(i)]['position']
-                physics.data.qvel[30+6*i:36+6*i] = start_state[str(i)]['position']
-            
+                physics.data.qvel[30+6*i:36+6*i] = start_state[str(i)]['velocity']
+                physics.data.qpos[30+6*i+2] += self.z_global_local_offset
+
         return super().initialize_episode(physics)
+
 
     def before_step(self, action, physics):
         """
@@ -157,10 +183,33 @@ class GeneralReferenceMotionMultiObjectTask(SingleObjectTask):
         if not self.additional_step:
             self.reference_motion.step()
 
+
     def after_step(self, physics):
         super().after_step(physics)
-        # TODO
+        if self.ref_only: # set position of objects (according to reference) and hand (fixed)
+            print('step: ', self._step_count)
+            
+            # hand - leave it high up
+            physics.data.qpos[:30] = self.start_state['position']
+            physics.data.qpos[1] = 0.7  # z-axis of hand
+            print(physics.data.qpos[30:], self.curr_float_obj_idx)
+
+            # other objects
+            for i, obj_name in enumerate(self.obj_names):
+                if i == self.curr_float_obj_idx:
+                    physics.data.qpos[30+6*i:33+6*i] = self.reference_motion._reference_motion['object_translation'][self._step_count-1]
+                    physics.data.qpos[33+6*i:36+6*i] = quat2euler(self.reference_motion._reference_motion['object_orientation'][self._step_count-1])
+                    physics.data.qpos[30+6*i+2] += self.z_global_local_offset
+            print(physics.data.qpos[30:], self.curr_float_obj_idx)
+
+        # Check if switch trajectory
         switched = self.switch_obj(physics)
+        if switched:
+            print('Switched trajectory!')
+
+        # if self.switch_num == 1:
+        #     while 1:
+        #         continue
 
     def get_termination(self, physics):
         if self.reference_motion.next_done and self.switch_num == self.switch_num_max:

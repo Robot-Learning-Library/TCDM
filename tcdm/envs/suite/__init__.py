@@ -33,8 +33,8 @@ def load(domain_name, task_name, task_kwargs=None, environment_kwargs=None, gym_
     return env
 
 
-def load_multi(env_name, task_kwargs=None, environment_kwargs=None, gym_wrap=False, obj_only=False):
-    domain = get_domain_multi(env_name, obj_only=obj_only)
+def load_multi(env_name, task_kwargs=None, environment_kwargs=None, gym_wrap=False, obj_only=False, switch=False):
+    domain = get_domain_multi(env_name, obj_only=obj_only, switch=switch, task_kwargs=task_kwargs)
 
     task_kwargs = {} if task_kwargs is None else task_kwargs
     environment_kwargs = {} if environment_kwargs is None else environment_kwargs
