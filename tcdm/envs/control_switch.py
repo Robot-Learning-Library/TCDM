@@ -135,7 +135,7 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
         obs['goal'][5::7] -= self.offset[1]
         obs['goal'][6::7] -= self.offset[2]
         obs['state'] = np.concatenate((obs['state'], obs['goal']))
-        obs['current_move_obj_idx'] = self.curr_move_obj_idx  # get the current object index
+        obs['current_move_obj_idx'] = np.array([self.curr_move_obj_idx], dtype=float)  # get the current object index
         return obs
 
 
