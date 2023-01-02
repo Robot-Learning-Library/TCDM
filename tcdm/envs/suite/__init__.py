@@ -29,7 +29,6 @@ def load(domain_name, task_name, task_kwargs=None, environment_kwargs=None, gym_
     environment_kwargs = {} if environment_kwargs is None else environment_kwargs
     task_kwargs = dict(task_kwargs, environment_kwargs=environment_kwargs)
     env = domain[task_name](**task_kwargs)
-    print(domain, task_name)
     env = GymWrapper(env) if gym_wrap else env
     return env
 
@@ -42,6 +41,5 @@ def load_multi(env_name, task_kwargs=None, environment_kwargs=None, gym_wrap=Fal
     task_kwargs = dict(task_kwargs, environment_kwargs=environment_kwargs)
     task_name = env_name.split('_')[-1]
     env = domain[task_name](**task_kwargs)
-    print(domain, task_name)
     env = GymWrapper(env) if gym_wrap else env
     return env

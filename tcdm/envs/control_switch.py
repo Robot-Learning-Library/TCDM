@@ -186,7 +186,7 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
     def after_step(self, physics):
         super().after_step(physics)
         if self.ref_only: # set position of objects (according to reference) and hand (fixed)
-            print('step: ', self._step_count)
+            print('step: ', self._step_count, self.curr_move_obj_idx)
             
             # hand - leave it high up
             physics.data.qpos[:30] = self.start_state['position']

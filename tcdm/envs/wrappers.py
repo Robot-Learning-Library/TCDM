@@ -44,7 +44,6 @@ class GymWrapper(core.Env):
         """
         self._base_env = base_env
         self._flat_dict = False     
-        print('base_env', base_env, base_env.observation_spec())
 
         # parses and stores action space
         self.action_space = _spec_to_box([base_env.action_spec()])

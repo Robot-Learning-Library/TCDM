@@ -65,42 +65,62 @@ def rollout(args, writer):
     else:
         o, t = config['env']['name'].split('-')
         env = suite.load(o, t, config['env']['task_kwargs'], gym_wrap=gym_wrap)
-    try:
-        policy = PPO.load(checkpoint_path)
-    except:
-        policy = PPO.load(checkpoint_path.replace('checkpoint.zip', 'restore_checkpoint'))
 
-    log = False
-    logger = {'s': [], 'a':[]}
-    # Launch viewer
-    # viewer.launch(env)
+    if config['env']['switch']: 
+        policies = []
+        policy_paths = ['outputs/2022-11-06/12-00-55',  # banana
+                        'outputs/2022-12-29/03-52-52'   # pan
+            ]
+        for path in policy_paths:
+            policies.append(PPO.load(os.path.join(path, 'restore_checkpoint')))
+    else:  # single policy
+        try:
+            policy = PPO.load(checkpoint_path)
+        except:
+            policy = PPO.load(checkpoint_path.replace('checkpoint.zip', 'restore_checkpoint'))
 
-    # Initialize window
-    # fig = plt.figure(figsize=(16,16))
-    # img = plt.imshow(env.render(mode='rgb_array')) # only call this once
-
-    # rollout the policy and print total reward
-    s, done, total_reward = env.reset(), False, 0
-    render(writer, env.wrapped.physics) if gym_wrap else render(writer, env.physics)
-    while not done:
-        action, _ = policy.predict(s['state'], deterministic=True)
-        s, r, done, __ = env.step(action)
+    if config['env']['switch']:
+        s, done, total_reward = env.reset(), False, 0
         render(writer, env.wrapped.physics) if gym_wrap else render(writer, env.physics)
-        total_reward += r
+        while not done:
+            policy = policies[int(s['current_move_obj_idx'][0])]
+            action, _ = policy.predict(s['state'], deterministic=True)
+            s, r, done, __ = env.step(action)
+            render(writer, env.wrapped.physics) if gym_wrap else render(writer, env.physics)
+            total_reward += r
+    else:
 
-        # img.set_data(env.render(mode='rgb_array')) # just update the data
-        # fig.canvas.draw_idle()
-        # plt.pause(0.5)
+        log = False
+        logger = {'s': [], 'a':[]}
 
+        # Launch viewer
+        # viewer.launch(env)
+
+        # Initialize window
+        # fig = plt.figure(figsize=(16,16))
+        # img = plt.imshow(env.render(mode='rgb_array')) # only call this once
+        # rollout the policy and print total reward
+        s, done, total_reward = env.reset(), False, 0
+        render(writer, env.wrapped.physics) if gym_wrap else render(writer, env.physics)
+        while not done:
+            action, _ = policy.predict(s['state'], deterministic=True)
+            s, r, done, __ = env.step(action)
+            render(writer, env.wrapped.physics) if gym_wrap else render(writer, env.physics)
+            total_reward += r
+
+            # img.set_data(env.render(mode='rgb_array')) # just update the data
+            # fig.canvas.draw_idle()
+            # plt.pause(0.5)
+
+            if log:
+                logger['s'].append(s['state'])
+                logger['a'].append(action)
+        print('Total reward:', total_reward)
         if log:
-            logger['s'].append(s['state'])
-            logger['a'].append(action)
-    print('Total reward:', total_reward)
-    if log:
-        df = pd.DataFrame(logger['s'])
-        df.to_csv(f's.csv', index=False, header=True)
-        df = pd.DataFrame(logger['a'])
-        df.to_csv(f'a.csv', index=False, header=True)
+            df = pd.DataFrame(logger['s'])
+            df.to_csv(f's.csv', index=False, header=True)
+            df = pd.DataFrame(logger['a'])
+            df.to_csv(f'a.csv', index=False, header=True)
 
 
 if __name__ == "__main__":
