@@ -56,7 +56,12 @@ def rollout(args, writer):
         config['env']['task_kwargs']['traj_path'] = args.traj_path
     # build environment and load policy
     if 'multi_obj' in config['env'] and config['env']['multi_obj']:
-        env = suite.load_multi(config['env']['name'], config['env']['task_kwargs'], gym_wrap=gym_wrap, obj_only=config['env']['obj_only'])
+        env = suite.load_multi(config['env']['name'], 
+                        config['env']['task_kwargs'], 
+                        gym_wrap=gym_wrap, 
+                        obj_only=config['env']['obj_only'],
+                        switch=config['env']['switch']
+                        )
     else:
         o, t = config['env']['name'].split('-')
         env = suite.load(o, t, config['env']['task_kwargs'], gym_wrap=gym_wrap)

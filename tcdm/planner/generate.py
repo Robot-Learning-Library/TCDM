@@ -48,9 +48,9 @@ def interpolate_quat(R_init, R_end, num_point):
 
 
 def motion_plan_one_obj(obj_list, 
-                        float_obj_idx, 
+                        move_obj_idx, 
                         obj_Xs, 
-                        float_obj_target_X,
+                        move_obj_target_X,
                         save_path,
                         ignore_collision_obj_idx_all=[],
                         collision_threshold=0.003,
@@ -77,20 +77,20 @@ def motion_plan_one_obj(obj_list,
         obj_Ys.append(get_transform(X_to_Z(obj_X)))
 
     # get target pose of the manipulated object from euler to quaternion
-    float_obj = objects[float_obj_idx]
-    float_obj_X = obj_Xs[float_obj_idx]
-    float_obj_Y = obj_Ys[float_obj_idx]
-    float_obj_target_Y = get_transform(X_to_Z(float_obj_target_X))
-    float_obj_Z = X_to_Z(float_obj_X)
-    float_obj_target_Z = X_to_Z(float_obj_target_X)
+    move_obj = objects[move_obj_idx]
+    move_obj_X = obj_Xs[move_obj_idx]
+    move_obj_Y = obj_Ys[move_obj_idx]
+    move_obj_target_Y = get_transform(X_to_Z(move_obj_target_X))
+    move_obj_Z = X_to_Z(move_obj_X)
+    move_obj_target_Z = X_to_Z(move_obj_target_X)
 
     # Configuration space boundaries - use quaternions of initial and end poses, plus some buffer
     # pose_lower = np.array([-0.1, -0.2, -0.2,  -1, -1, -1, -1])
     # pose_upper = np.array([ 0.1,  0.2,  0.2,  1,  1,  1,  1])
-    p_min = np.minimum(float_obj_Z[:3], float_obj_target_Z[:3]) - p_bound_buffer
-    p_max = np.maximum(float_obj_Z[:3], float_obj_target_Z[:3]) + p_bound_buffer
-    q_min = np.minimum(float_obj_Z[3:], float_obj_target_Z[3:]) - q_bound_buffer
-    q_max = np.maximum(float_obj_Z[3:], float_obj_target_Z[3:]) + q_bound_buffer
+    p_min = np.minimum(move_obj_Z[:3], move_obj_target_Z[:3]) - p_bound_buffer
+    p_max = np.maximum(move_obj_Z[:3], move_obj_target_Z[:3]) + p_bound_buffer
+    q_min = np.minimum(move_obj_Z[3:], move_obj_target_Z[3:]) - q_bound_buffer
+    q_max = np.maximum(move_obj_Z[3:], move_obj_target_Z[3:]) + q_bound_buffer
     # pose_lower[3:] = q_min
     # pose_upper[3:] = q_max
     pose_lower = np.hstack((p_min, q_min))
@@ -102,18 +102,18 @@ def motion_plan_one_obj(obj_list,
     other_objects_Y = []
     other_objects_idx = []
     for i, obj in enumerate(objects):
-        if i != float_obj_idx:
+        if i != move_obj_idx:
             other_objects.append(obj)
             other_objects_Y.append(obj_Ys[i])
             other_objects_idx.append(i)
             scene_end.add_geometry(obj, transform=obj_Ys[i])
-    scene_end.add_geometry(float_obj, transform=float_obj_target_Y)
-    scene_end.add_geometry(float_obj, transform=float_obj_Y)
+    scene_end.add_geometry(move_obj, transform=move_obj_target_Y)
+    scene_end.add_geometry(move_obj, transform=move_obj_Y)
     if visualize:
         print('Visualizing the final scene...')
         scene_end.show()
 
-    # Initialize collision checker - floating object is labeled as str(float_obj_idx)
+    # Initialize collision checker - moving object is labeled as str(move_obj_idx)
     collision_checker = trimesh.collision.CollisionManager()
     for i, obj in enumerate(objects):
         collision_checker.add_object(str(i), obj, obj_Ys[i])
@@ -125,9 +125,9 @@ def motion_plan_one_obj(obj_list,
     path, path_full = rrt(collision_checker, 
                             pose_lower, 
                             pose_upper, 
-                            float_obj_idx, 
-                            float_obj_Z,
-                            float_obj_target_Z, 
+                            move_obj_idx, 
+                            move_obj_Z,
+                            move_obj_target_Z, 
                             # other_objects,
                             # other_objects_transformed_pose, 
                             collision_threshold,
@@ -148,7 +148,7 @@ def motion_plan_one_obj(obj_list,
     for i, obj in enumerate(other_objects):
         scene_planned.add_geometry(obj, transform=other_objects_Y[i])
     for X in path_full:
-        scene_planned.add_geometry(float_obj, transform=get_transform(X))
+        scene_planned.add_geometry(move_obj, transform=get_transform(X))
     if visualize:
         print('Visualizing the planned scene...')
         scene_planned.show()
@@ -188,7 +188,7 @@ def motion_plan_one_obj(obj_list,
     # Add obj pose to s_0
     for obj_idx, obj_X in enumerate(obj_Xs):
         traj['s_0']['motion_planned'][str(obj_idx)] = {}
-        if obj_idx == float_obj_idx:
+        if obj_idx == move_obj_idx:
             traj['s_0']['motion_planned'][str(obj_idx)]['position'] = \
                 np.hstack((translation_tcdm[0],
                            quat2euler(orientation_tcdm[0]),
@@ -213,9 +213,9 @@ def motion_plan_one_obj(obj_list,
 def rrt(collision_checker, 
         pose_lower, 
         pose_upper, 
-        float_obj_idx, 
-        float_obj_init_Z, 
-        float_obj_end_Z, 
+        move_obj_idx, 
+        move_obj_init_Z, 
+        move_obj_end_Z, 
         # target_objs, 
         # target_objs_X, 
         collision_threshold,
@@ -239,11 +239,11 @@ def rrt(collision_checker,
         X=SearchSpace(X_dimensions, 
                       collision_checker, 
                       collision_threshold, 
-                      float_obj_idx, 
+                      move_obj_idx, 
                       ignore_collision_obj_idx_all), 
         Q=Q,
-        x_init=tuple(float_obj_init_Z),
-        x_goal=tuple(float_obj_end_Z),
+        x_init=tuple(move_obj_init_Z),
+        x_goal=tuple(move_obj_end_Z),
         max_samples=max_samples, 
         r=r, 
         prc=prc, 
@@ -256,7 +256,7 @@ def rrt(collision_checker,
     # for target_obj, target_obj_X in zip(target_objs, target_objs_X):
     #     scene_planned.add_geometry(target_obj, transform=target_obj_X)
     # for X in path:
-    #     scene_planned.add_geometry(float_obj, transform=get_transform(X))
+    #     scene_planned.add_geometry(move_obj, transform=get_transform(X))
     # scene_planned.show()
 
     path_full = []

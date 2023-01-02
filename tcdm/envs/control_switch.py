@@ -18,7 +18,7 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
                        init_key, 
                        obj_names,
                        ref_only,
-                       float_obj_seq,
+                       move_obj_seq,
                        target_obj_Xs,
                        traj_folder='new_agents/banana_fryingpan_pass1',
                        use_saved_traj=False, 
@@ -26,10 +26,10 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
                     #    random=None
                        ):
         self.target_obj_Xs = target_obj_Xs
-        self.float_obj_seq = float_obj_seq
+        self.move_obj_seq = move_obj_seq
         self.switch_num = 0 
-        self.switch_num_max = len(self.float_obj_seq)-1 if self.float_obj_seq is not None else len(self.obj_names)-1
-        self.curr_float_obj_idx = self.switch_num if self.float_obj_seq is None else self.float_obj_seq[0]
+        self.switch_num_max = len(self.move_obj_seq)-1 if self.move_obj_seq is not None else len(self.obj_names)-1
+        self.curr_move_obj_idx = self.switch_num if self.move_obj_seq is None else self.move_obj_seq[0]
         self.traj_folder = traj_folder
         self.use_saved_traj = use_saved_traj
 
@@ -51,24 +51,23 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
             if self.switch_num == self.switch_num_max:   # terminate episode
                 return False
             self.switch_num += 1
-            if self.float_obj_seq is None:
-                self.curr_float_obj_idx = self.switch_num
+            if self.move_obj_seq is None:
+                self.curr_move_obj_idx = self.switch_num
             else:
-                self.curr_float_obj_idx = self.float_obj_seq[self.switch_num]
-            object_name = self.float_obj_seq[self.curr_float_obj_idx]
-
+                self.curr_move_obj_idx = self.move_obj_seq[self.switch_num]
+            object_name = self.move_obj_seq[self.curr_move_obj_idx]
             traj_path = f'./{self.traj_folder}/traj_{self.switch_num}.npz'
             if not self.use_saved_traj:
-                cur_qpos = physics.data.qpos[30:].reshape(-1, 6)
+                cur_qpos = copy.deepcopy(physics.data.qpos[30:].reshape(-1, 6))
                 cur_qpos[:, 2] += -self.z_global_local_offset   # local to global...
                 traj, _ = motion_plan_one_obj(
                     obj_list=[name.split('/')[0] for name in self.obj_names], 
-                    float_obj_idx=self.curr_float_obj_idx, 
+                    move_obj_idx=self.curr_move_obj_idx, 
                     obj_Xs=cur_qpos.tolist(),  # get current object poses
-                    float_obj_target_X=self.target_obj_Xs[self.curr_float_obj_idx], 
+                    move_obj_target_X=self.target_obj_Xs[self.curr_move_obj_idx], 
                     save_path=traj_path,
-                    ignore_collision_obj_idx_all=[idx for idx in range(len(self.obj_names)) if idx != self.curr_float_obj_idx],  # ignore collision with all other objects
-                    visualize=True) # TODO: cfg for visualize
+                    ignore_collision_obj_idx_all=[idx for idx in range(len(self.obj_names)) if idx != self.curr_move_obj_idx],  # ignore collision with all other objects
+                    visualize=False) # TODO: cfg for visualize
 
             # TODO: directly pass trajectory instead of saving to file
             self.reference_motion = HandObjectReferenceMotion(object_name, traj_path)
@@ -90,7 +89,7 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
 
 
     def get_observation(self, physics):
-        obs = Task.get_observation(self, physics, self.curr_float_obj_idx)  # obj_idx specifies which object to get observation
+        obs = Task.get_observation(self, physics, self.curr_move_obj_idx)  # obj_idx specifies which object to get observation
         base_pos = obs['position']
         base_vel = obs['velocity']
 
@@ -136,7 +135,7 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
         obs['goal'][5::7] -= self.offset[1]
         obs['goal'][6::7] -= self.offset[2]
         obs['state'] = np.concatenate((obs['state'], obs['goal']))
-        obs['current_float_obj_idx'] = self.curr_float_obj_idx  # get the current object index
+        obs['current_move_obj_idx'] = self.curr_move_obj_idx  # get the current object index
         return obs
 
 
@@ -192,15 +191,15 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
             # hand - leave it high up
             physics.data.qpos[:30] = self.start_state['position']
             physics.data.qpos[1] = 0.7  # z-axis of hand
-            print(physics.data.qpos[30:], self.curr_float_obj_idx)
+            # print(physics.data.qpos[30:], self.curr_move_obj_idx)
 
             # other objects
             for i, obj_name in enumerate(self.obj_names):
-                if i == self.curr_float_obj_idx:
+                if i == self.curr_move_obj_idx:
                     physics.data.qpos[30+6*i:33+6*i] = self.reference_motion._reference_motion['object_translation'][self._step_count-1]
                     physics.data.qpos[33+6*i:36+6*i] = quat2euler(self.reference_motion._reference_motion['object_orientation'][self._step_count-1])
                     physics.data.qpos[30+6*i+2] += self.z_global_local_offset
-            print(physics.data.qpos[30:], self.curr_float_obj_idx)
+            # print(physics.data.qpos[30:], self.curr_move_obj_idx)
 
         # Check if switch trajectory
         switched = self.switch_obj(physics)
