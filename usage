@@ -22,6 +22,7 @@ python generate_traj_video.py --render --env all
 
 # multiple objects manipulation
 python planner.py
-python rollout.py --save_folder new_agents/banana_cup_pass1 --checkpoint outputs/2022-11-06/12-00-55 --traj_path trajectories/multi_trajs --render
+python rollout.py --save_folder new_agents/banana_cup_pass1 --checkpoint outputs/2022-11-06/12-00-55 --traj_path new_agents/ --render
+python rollout.py --save_folder new_agents/banana_fryingpan_pass1 --ref_only True --render
 
 python visualize.py --save_folder new_agents/banana_fryingpan_pass1

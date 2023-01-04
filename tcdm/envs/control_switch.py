@@ -36,6 +36,7 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
         self.ref_only = ref_only
         self.obj_names = obj_names
         self.reference_motion = reference_motion  # this is the first reference motion
+
         self._init_key = init_key
         self.z_global_local_offset = -0.2
         
@@ -186,7 +187,7 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
     def after_step(self, physics):
         super().after_step(physics)
         if self.ref_only: # set position of objects (according to reference) and hand (fixed)
-            print('step: ', self._step_count, self.curr_move_obj_idx)
+            print('step: ', self._step_count, ' current object index: ', self.curr_move_obj_idx)
             
             # hand - leave it high up
             physics.data.qpos[:30] = self.start_state['position']
@@ -199,7 +200,9 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
                     physics.data.qpos[30+6*i:33+6*i] = self.reference_motion._reference_motion['object_translation'][self._step_count-1]
                     physics.data.qpos[33+6*i:36+6*i] = quat2euler(self.reference_motion._reference_motion['object_orientation'][self._step_count-1])
                     physics.data.qpos[30+6*i+2] += self.z_global_local_offset
-            # print(physics.data.qpos[30:], self.curr_move_obj_idx)
+                    
+                else:
+                    physics.data.qvel[30+6*i:30+6*i+6] = 6*[0]  # make other objects static
 
         # Check if switch trajectory
         switched = self.switch_obj(physics)
