@@ -154,7 +154,7 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
             physics.data.qpos[:30] = start_state['position']
             physics.data.qvel[:30] = start_state['velocity']
 
-            # other objects
+            # objects
             for i, obj_name in enumerate(self.obj_names):
                 physics.data.qpos[30+6*i:36+6*i] = start_state[str(i)]['position']
                 physics.data.qvel[30+6*i:36+6*i] = start_state[str(i)]['velocity']

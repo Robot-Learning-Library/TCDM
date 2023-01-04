@@ -32,14 +32,12 @@ def rollout(save_folder):
         env = suite.load_multi(config['env']['name'],
                                config['env']['task_kwargs'], 
                                gym_wrap=False, 
-                               obj_only=config['env']['obj_only'],
-                               switch=config['env']['switch'])
+                              )
     else:
-        o, t = config['env']['name'].split('-')
-        env = suite.load(o, t, 
+        env = suite.load(config['env']['name'],
                          config['env']['task_kwargs'], 
                          gym_wrap=False,    # do not wrap gym, otherwise launch interactive viewer from dm_control 
-                         obj_only=config['env']['obj_only'])
+                        )
 
     # Launch viewer
     viewer.launch(env)

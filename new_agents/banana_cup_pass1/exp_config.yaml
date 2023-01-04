@@ -31,8 +31,6 @@ defaults:
 env:
   #!
   multi_obj: True
-  obj_only: False
-  switch: False
   #!
   env_kwargs: {}
   info_keywords:
@@ -45,6 +43,9 @@ env:
   name: banana-cup-pass1
   state_keyword: state
   task_kwargs:
+    switch: False
+    obj_only: False
+    ref_only: False
     append_time: true
     pregrasp: motion_planned
     reward_kwargs:

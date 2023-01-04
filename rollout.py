@@ -59,14 +59,11 @@ def rollout(args, writer):
         env = suite.load_multi(config['env']['name'], 
                         config['env']['task_kwargs'], 
                         gym_wrap=gym_wrap, 
-                        obj_only=config['env']['obj_only'],
-                        switch=config['env']['switch']
                         )
     else:
-        o, t = config['env']['name'].split('-')
-        env = suite.load(o, t, config['env']['task_kwargs'], gym_wrap=gym_wrap)
+        env = suite.load(config['env']['name'], config['env']['task_kwargs'], gym_wrap=gym_wrap)
 
-    if config['env']['switch']: 
+    if config['env']['task_kwargs']['switch']: 
         policies = []
         policy_paths = ['outputs/2022-11-06/12-00-55',  # banana
                         'outputs/2022-12-29/03-52-52'   # pan
@@ -79,7 +76,7 @@ def rollout(args, writer):
         except:
             policy = PPO.load(checkpoint_path.replace('checkpoint.zip', 'restore_checkpoint'))
 
-    if config['env']['switch']:
+    if config['env']['task_kwargs']['switch']:
         s, done, total_reward = env.reset(), False, 0
         render(writer, env.wrapped.physics) if gym_wrap else render(writer, env.physics)
         while not done:

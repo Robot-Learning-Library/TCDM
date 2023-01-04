@@ -31,8 +31,6 @@ defaults:
 env:
   #!
   multi_obj: True
-  obj_only: False
-  switch: True
   #1
   env_kwargs: {}
   info_keywords:
@@ -46,7 +44,9 @@ env:
   state_keyword: state
   task_kwargs:
     #!
-    ref_only: True
+    switch: True
+    obj_only: False
+    ref_only: False
     float_obj_seq: [0,1]
     use_saved_traj: False
     target_obj_Xs: [[-0.028693, 0.08177, 0.04143, -3.05750797, 0.08599904, -0.99028331],
