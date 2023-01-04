@@ -194,15 +194,15 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
             physics.data.qpos[1] = 0.7  # z-axis of hand
             # print(physics.data.qpos[30:], self.curr_move_obj_idx)
 
-            # other objects
+            # objects
             for i, obj_name in enumerate(self.obj_names):
                 if i == self.curr_move_obj_idx:
                     physics.data.qpos[30+6*i:33+6*i] = self.reference_motion._reference_motion['object_translation'][self._step_count-1]
                     physics.data.qpos[33+6*i:36+6*i] = quat2euler(self.reference_motion._reference_motion['object_orientation'][self._step_count-1])
                     physics.data.qpos[30+6*i+2] += self.z_global_local_offset
                     
-                else:
-                    physics.data.qvel[30+6*i:30+6*i+6] = 6*[0]  # make other objects static
+                # else:
+                #     physics.data.qvel[30+6*i:30+6*i+6] = 6*[0]  # make other objects static
 
         # Check if switch trajectory
         switched = self.switch_obj(physics)
