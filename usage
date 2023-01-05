@@ -2,6 +2,8 @@
 python rollout.py --save_folder outputs/2022-11-06/12-00-55  --render
 # cup policy
 python rollout.py --save_folder outputs/2022-11-18/03-10-51  --render
+# pan policy
+python rollout.py --save_folder outputs/2022-12-29/03-52-52  --render
 
 pretrained mug:
 python rollout.py --save_folder outputs/2022-11-16/19-27-32  --render

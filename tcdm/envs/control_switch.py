@@ -39,11 +39,12 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
 
         self._init_key = init_key
         self.z_global_local_offset = -0.2
-        
-        # TODO: ???
-        print(self.reference_motion.reset()[self._init_key][str(self.curr_move_obj_idx)]['position'].shape)
-        self.offset = self.reference_motion.reset()[self._init_key][str(self.curr_move_obj_idx)]['position'][:3] # 3 of 6 as xyz
-        print(self.offset)
+
+        # object offset in global frame
+        original_banana_ini_pose = [ 0.01895152, -0.01185687, -0.17970488+0.2]  # reference_motion.reset()[self._init_key]['position'][30:33] in original banana env, z+0.2 to global frame
+        start_state = self.reference_motion.reset()[self._init_key]
+        self.offset = start_state[str(self.curr_move_obj_idx)]['position'][:3] - original_banana_ini_pose # 3 of 6 as xyz
+        print(self.offset)        
         super().__init__(obj_names[0], reward_fns, reward_weights, random=None)
 
 
@@ -73,9 +74,14 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
         self.reference_motion = HandObjectReferenceMotion(object_name, traj_path)
         # reset hand pose
         start_state = self.reference_motion.reset()[self._init_key]
-        self.offset = start_state[str(self.curr_move_obj_idx)]['position'][:3] # 3 of 6 as xyz
+        
+        # object offset in global frame
+        original_pan_ini_pose = [0.00130683,  0.03177048, -0.17431791+0.2] # reference_motion.reset()[self._init_key]['position'][30:33] in original banana env, z+0.2 to global frame
+        self.offset = start_state[str(self.curr_move_obj_idx)]['position'][:3] - original_pan_ini_pose # 3 of 6 as xyz
         print(self.offset)
-        physics.data.qpos[:30] = start_state['position']
+
+        physics.data.qpos[:30] = start_state['position']   # TODO for different object, this ini pose can be different
+        physics.data.qpos[:3] += self.offset
         physics.data.qvel[:30] = start_state['velocity']
         
         # Reset step
@@ -151,10 +157,11 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
         self.additional_step = False # whether to step after the reference motion is done
         start_state = self.reference_motion.reset()[self._init_key]  # _init_key='motion_planned'
         self.start_state = start_state
-        
+
         with physics.reset_context():
             # hand
             physics.data.qpos[:30] = start_state['position']
+            physics.data.qpos[:3] += self.offset
             physics.data.qvel[:30] = start_state['velocity']
 
             # objects
