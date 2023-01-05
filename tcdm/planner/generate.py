@@ -57,6 +57,29 @@ def motion_plan_one_obj(obj_list,
                         p_bound_buffer=0.1, 
                         q_bound_buffer=0.2,
                         visualize=False):
+    """_summary_
+
+    :param obj_list: list of object names
+    :type obj_list: _type_
+    :param move_obj_idx: the idex of the object to be moved
+    :type move_obj_idx: _type_
+    :param obj_Xs: the 6-dim poses of all objects
+    :type obj_Xs: _type_
+    :param move_obj_target_X: the 6-dim pose of the target pose of the manipulated object
+    :type move_obj_target_X: _type_
+    :param save_path: the path to save the motion plan
+    :type save_path: _type_
+    :param ignore_collision_obj_idx_all: the idx of object to ignore collision with, defaults to []
+    :type ignore_collision_obj_idx_all: list, optional
+    :param collision_threshold: _description_, defaults to 0.003
+    :type collision_threshold: float, optional
+    :param p_bound_buffer: _description_, defaults to 0.1
+    :type p_bound_buffer: float, optional
+    :param q_bound_buffer: _description_, defaults to 0.2
+    :type q_bound_buffer: float, optional
+    :param visualize: _description_, defaults to False
+    :type visualize: bool, optional
+    """
     def get_path(obj_name):
         obj_path = './tcdm/envs/assets/meshes/objects/'
         return os.path.join(obj_path, obj_name + '/' + obj_name + '.stl')
@@ -168,7 +191,17 @@ def motion_plan_one_obj(obj_list,
         reference_motion =  {k:v for k, v in motion_file.items()}
         reference_motion['s_0'] = reference_motion['s_0'][()]
         return reference_motion
-    data = load_motion('./trajectories/banana_pass1.npz')
+
+    # get the reference motion of corresponding object
+    object_name = obj_list[move_obj_idx]
+    ref_traj_file_path = './trajectories'
+    for filename in os.listdir(ref_traj_file_path):
+        if object_name in filename and '.npz' in filename:
+            ref_traj_file = os.path.join(ref_traj_file_path, filename)
+            break
+    print('plan using traj file: ', ref_traj_file)
+    data = load_motion(ref_traj_file)
+    # data = load_motion('./trajectories/banana_pass1.npz')
     traj = copy.copy(dict(data))
     # print(traj['s_0']['motion_planned']['position'][-6:])
 

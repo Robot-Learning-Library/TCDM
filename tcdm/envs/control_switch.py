@@ -32,6 +32,8 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
         self.curr_move_obj_idx = self.switch_num if self.move_obj_seq is None else self.move_obj_seq[0]
         self.traj_folder = traj_folder
         self.use_saved_traj = use_saved_traj
+        self.smooth_loosen_steps = 30 # loosen hand in switch
+        self.smooth_move_steps = 0  # move hand to target pose in switch
 
         self.ref_only = ref_only
         self.obj_names = obj_names
@@ -92,6 +94,36 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
         
         # Reset step
         self._step_count = 0
+
+    def loosen_hand(self, physics, ):
+        self.additional_step_cnt +=1
+        target_hand_pose = np.zeros(24)   # fully open hand pose
+        # target_hand_pose = self.start_state['position'][6:30]  # set hand to initial joint position
+        if self.additional_step_cnt == 1: 
+            self.end_hand_pose = copy.deepcopy(physics.data.qpos[:6])
+            self.end_hand_joint_pose = copy.deepcopy(physics.data.qpos[6:30])
+            self.end_obj_pose = copy.deepcopy(physics.data.qpos[30:])
+
+        # smoothly move to target hand pose (not grasping object)
+        if self.additional_step_cnt <= self.smooth_loosen_steps:
+            physics.data.qpos[6:30] = self.end_hand_joint_pose + (target_hand_pose - self.end_hand_joint_pose)*self.additional_step_cnt/self.smooth_loosen_steps  # set hand to initial joint position
+        else:
+            physics.data.qpos[6:30] = target_hand_pose
+
+        self.additional_step = True
+
+    def move_hand_to_target(self, physics, ):
+        self.additional_step_cnt +=1
+
+        target_hand_pose = 0
+
+        if self.additional_step_cnt == self.smooth_loosen_steps + 1: 
+            self.end_hand_full_pose = copy.deepcopy(physics.data.qpos[:30])
+        # smoothly move to target hand pose (not grasping object)
+        if self.additional_step_cnt <= self.smooth_loosen_steps + self.smooth_move_steps:
+            physics.data.qpos[:30] = self.end_hand_full_pose + (target_hand_pose - self.end_hand_full_pose)*(self.additional_step_cnt-self.smooth_loosen_steps)/self.smooth_move_steps  # set hand to initial joint position
+        else:
+            physics.data.qpos[:30] = target_hand_pose
 
     def check_switch(self):
         return self.reference_motion.next_done
@@ -233,9 +265,17 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
                 #     physics.data.qvel[30+6*i:30+6*i+6] = 6*[0]  # make other objects static
         
         if switch:
-            # Check if switch trajectory
-            self.switch_obj(physics)
-            print('Switched trajectory!')
+            if self.additional_step_cnt < self.smooth_loosen_steps:
+                self.loosen_hand(physics)
+            elif self.additional_step_cnt < self.smooth_loosen_steps + self.smooth_move_steps:
+                self.move_hand_to_target(physics)
+            else:
+                self.additional_step_cnt = 0
+                self.additional_step = False
+
+                # Check if switch trajectory
+                self.switch_obj(physics)
+                print('Switched trajectory!')
 
 
     def get_termination(self, physics):
