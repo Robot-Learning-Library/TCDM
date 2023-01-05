@@ -41,6 +41,7 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
         self.z_global_local_offset = -0.2
 
         # object offset in global frame
+        self.avoid_collision_z_shift = 0.0
         original_banana_ini_pose = [ 0.01895152, -0.01185687, -0.17970488+0.2]  # reference_motion.reset()[self._init_key]['position'][30:33] in original banana env, z+0.2 to global frame
         start_state = self.reference_motion.reset()[self._init_key]
         self.offset = start_state[str(self.curr_move_obj_idx)]['position'][:3] - original_banana_ini_pose # 3 of 6 as xyz
@@ -81,7 +82,12 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
         print(self.offset)
 
         physics.data.qpos[:30] = start_state['position']   # TODO for different object, this ini pose can be different
-        physics.data.qpos[:3] += self.offset
+        # physics.data.qpos[:3] -= self.offset
+        # add object offset for hand; global to local (qpos)
+        physics.data.qpos[0] -= self.offset[0]
+        physics.data.qpos[1] += self.offset[2]
+        physics.data.qpos[2] += self.offset[1]
+        physics.data.qpos[2] += self.avoid_collision_z_shift
         physics.data.qvel[:30] = start_state['velocity']
         
         # Reset step
@@ -161,7 +167,12 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
         with physics.reset_context():
             # hand
             physics.data.qpos[:30] = start_state['position']
-            physics.data.qpos[:3] += self.offset
+            # physics.data.qpos[:3] -= self.offset
+            # add object offset for hand; global to local (qpos)
+            physics.data.qpos[0] -= self.offset[0]
+            physics.data.qpos[1] += self.offset[2]
+            physics.data.qpos[2] += self.offset[1]
+            physics.data.qpos[2] += self.avoid_collision_z_shift
             physics.data.qvel[:30] = start_state['velocity']
 
             # objects
@@ -200,9 +211,8 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
     def after_step(self, physics):
         super().after_step(physics)
         switch = self.check_switch()
-
+        print('step: ', self._step_count, ' current object index: ', self.curr_move_obj_idx)
         if self.ref_only: # set position of objects (according to reference) and hand (fixed)
-            print('step: ', self._step_count, ' current object index: ', self.curr_move_obj_idx)
             
             # hand - leave it high up
             physics.data.qpos[:30] = self.start_state['position']
