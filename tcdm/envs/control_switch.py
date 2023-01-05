@@ -33,7 +33,7 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
         self.traj_folder = traj_folder
         self.use_saved_traj = use_saved_traj
         self.smooth_loosen_steps = 30 # loosen hand in switch
-        self.smooth_move_steps = 0  # move hand to target pose in switch
+        self.smooth_move_steps = 20  # move hand to target pose in switch
 
         self.ref_only = ref_only
         self.obj_names = obj_names
@@ -115,7 +115,7 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
     def move_hand_to_target(self, physics, ):
         self.additional_step_cnt +=1
 
-        target_hand_pose = 0
+        target_hand_pose = self.start_state['position'][:30]  # set hand to initial joint position
 
         if self.additional_step_cnt == self.smooth_loosen_steps + 1: 
             self.end_hand_full_pose = copy.deepcopy(physics.data.qpos[:30])
@@ -125,8 +125,10 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
         else:
             physics.data.qpos[:30] = target_hand_pose
 
-    def check_switch(self):
-        return self.reference_motion.next_done
+    def check_switch(self, physics):
+        switch = self.reference_motion.next_done
+
+        return switch
 
 
     @property
@@ -242,8 +244,9 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
 
     def after_step(self, physics):
         super().after_step(physics)
-        switch = self.check_switch()
         print('step: ', self._step_count, ' current object index: ', self.curr_move_obj_idx)
+        switch = self.check_switch(physics)
+
         if self.ref_only: # set position of objects (according to reference) and hand (fixed)
             
             # hand - leave it high up
@@ -263,7 +266,7 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
                     #     physics.data.qvel[30+6*i:30+6*i+6] = 6*[0]
                 # else:
                 #     physics.data.qvel[30+6*i:30+6*i+6] = 6*[0]  # make other objects static
-        
+
         if switch:
             if self.additional_step_cnt < self.smooth_loosen_steps:
                 self.loosen_hand(physics)
@@ -273,7 +276,7 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
                 self.additional_step_cnt = 0
                 self.additional_step = False
 
-                # Check if switch trajectory
+                # switch trajectory
                 self.switch_obj(physics)
                 print('Switched trajectory!')
 
