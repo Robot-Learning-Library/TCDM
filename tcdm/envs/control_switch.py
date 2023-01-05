@@ -41,42 +41,45 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
         self.z_global_local_offset = -0.2
         
         # TODO: ???
-        self.offset = np.zeros((3))
-
+        print(self.reference_motion.reset()[self._init_key][str(self.curr_move_obj_idx)]['position'].shape)
+        self.offset = self.reference_motion.reset()[self._init_key][str(self.curr_move_obj_idx)]['position'][:3] # 3 of 6 as xyz
+        print(self.offset)
         super().__init__(obj_names[0], reward_fns, reward_weights, random=None)
 
 
     def switch_obj(self, physics):
-        switch = self.check_switch()
-        if switch:
-            if self.switch_num == self.switch_num_max:   # terminate episode
-                return False
-            self.switch_num += 1
-            if self.move_obj_seq is None:
-                self.curr_move_obj_idx = self.switch_num
-            else:
-                self.curr_move_obj_idx = self.move_obj_seq[self.switch_num]
-            object_name = self.move_obj_seq[self.curr_move_obj_idx]
-            traj_path = f'./{self.traj_folder}/traj_{self.switch_num}.npz'
-            if not self.use_saved_traj:
-                cur_qpos = copy.deepcopy(physics.data.qpos[30:].reshape(-1, 6))
-                cur_qpos[:, 2] += -self.z_global_local_offset   # local to global...
-                traj, _ = motion_plan_one_obj(
-                    obj_list=[name.split('/')[0] for name in self.obj_names], 
-                    move_obj_idx=self.curr_move_obj_idx, 
-                    obj_Xs=cur_qpos.tolist(),  # get current object poses
-                    move_obj_target_X=self.target_obj_Xs[self.curr_move_obj_idx], 
-                    save_path=traj_path,
-                    ignore_collision_obj_idx_all=[idx for idx in range(len(self.obj_names)) if idx != self.curr_move_obj_idx],  # ignore collision with all other objects
-                    visualize=False) # TODO: cfg for visualize
+        if self.switch_num == self.switch_num_max:   # terminate episode
+            return False
+        self.switch_num += 1
+        if self.move_obj_seq is None:
+            self.curr_move_obj_idx = self.switch_num
+        else:
+            self.curr_move_obj_idx = self.move_obj_seq[self.switch_num]
+        object_name = self.move_obj_seq[self.curr_move_obj_idx]
+        traj_path = f'./{self.traj_folder}/traj_{self.switch_num}.npz'
+        if not self.use_saved_traj:
+            cur_qpos = copy.deepcopy(physics.data.qpos[30:].reshape(-1, 6))
+            cur_qpos[:, 2] += -self.z_global_local_offset   # local to global...
+            traj, _ = motion_plan_one_obj(
+                obj_list=[name.split('/')[0] for name in self.obj_names], 
+                move_obj_idx=self.curr_move_obj_idx, 
+                obj_Xs=cur_qpos.tolist(),  # get current object poses
+                move_obj_target_X=self.target_obj_Xs[self.curr_move_obj_idx], 
+                save_path=traj_path,
+                ignore_collision_obj_idx_all=[idx for idx in range(len(self.obj_names)) if idx != self.curr_move_obj_idx],  # ignore collision with all other objects
+                visualize=False) # TODO: cfg for visualize
 
-            # TODO: directly pass trajectory instead of saving to file
-            self.reference_motion = HandObjectReferenceMotion(object_name, traj_path)
-            
-            # Reset step
-            self._step_count = 0
-        return switch
-
+        # TODO: directly pass trajectory instead of saving to file
+        self.reference_motion = HandObjectReferenceMotion(object_name, traj_path)
+        # reset hand pose
+        start_state = self.reference_motion.reset()[self._init_key]
+        self.offset = start_state[str(self.curr_move_obj_idx)]['position'][:3] # 3 of 6 as xyz
+        print(self.offset)
+        physics.data.qpos[:30] = start_state['position']
+        physics.data.qvel[:30] = start_state['velocity']
+        
+        # Reset step
+        self._step_count = 0
 
     def check_switch(self):
         return self.reference_motion.next_done
@@ -167,17 +170,20 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
         """
         action is 30 dimensional: 3 for hand translation, 3 for hand rotation, 24 for joint pose, all abosulte position (not delta)!
         """
-        # correct hand translation in action  by adding offet
-        denorm_action = _denormalize_action(physics, action)  # since offset is in denormed space (true coordinate)
-        denorm_action[0] -= self.offset[0] # action match with qpos dimension, so frame change from hand base (-x, z, y, for action) to global (x,y,z, for offset)
-        denorm_action[1] += self.offset[2]
-        denorm_action[2] += self.offset[1]
-        action = _normalize_action(physics, denorm_action)
+        if self.ref_only:
+            action = 30*[0]
+        else:
+            # correct hand translation in action  by adding offet
+            denorm_action = _denormalize_action(physics, action)  # since offset is in denormed space (true coordinate)
+            denorm_action[0] -= self.offset[0] # action match with qpos dimension, so frame change from hand base (-x, z, y, for action) to global (x,y,z, for offset)
+            denorm_action[1] += self.offset[2]
+            denorm_action[2] += self.offset[1]
+            action = _normalize_action(physics, denorm_action)
 
-        if self.additional_step: 
-            # physics.data.qvel[:] = 0
-            action = physics.data.qpos[:30].copy()  # 30 dim: 3 for hand translation, 3 for hand rotation, 24 for joint pose
-            action = _normalize_action(physics, action)  # since action will be denormalized later
+            if self.additional_step: 
+                # physics.data.qvel[:] = 0
+                action = physics.data.qpos[:30].copy()  # 30 dim: 3 for hand translation, 3 for hand rotation, 24 for joint pose
+                action = _normalize_action(physics, action)  # since action will be denormalized later
 
         super().before_step(action, physics)
         if not self.additional_step:
@@ -186,11 +192,14 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
 
     def after_step(self, physics):
         super().after_step(physics)
+        switch = self.check_switch()
+
         if self.ref_only: # set position of objects (according to reference) and hand (fixed)
             print('step: ', self._step_count, ' current object index: ', self.curr_move_obj_idx)
             
             # hand - leave it high up
             physics.data.qpos[:30] = self.start_state['position']
+            physics.data.qvel[:30] = self.start_state['velocity']
             physics.data.qpos[1] = 0.7  # z-axis of hand
             # print(physics.data.qpos[30:], self.curr_move_obj_idx)
 
@@ -200,18 +209,17 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
                     physics.data.qpos[30+6*i:33+6*i] = self.reference_motion._reference_motion['object_translation'][self._step_count-1]
                     physics.data.qpos[33+6*i:36+6*i] = quat2euler(self.reference_motion._reference_motion['object_orientation'][self._step_count-1])
                     physics.data.qpos[30+6*i+2] += self.z_global_local_offset
-                    
+
+                    # if switch:  # make object static at switch
+                    #     physics.data.qvel[30+6*i:30+6*i+6] = 6*[0]
                 # else:
                 #     physics.data.qvel[30+6*i:30+6*i+6] = 6*[0]  # make other objects static
-
-        # Check if switch trajectory
-        switched = self.switch_obj(physics)
-        if switched:
+        
+        if switch:
+            # Check if switch trajectory
+            self.switch_obj(physics)
             print('Switched trajectory!')
 
-        # if self.switch_num == 1:
-        #     while 1:
-        #         continue
 
     def get_termination(self, physics):
         if self.reference_motion.next_done and self.switch_num == self.switch_num_max:
