@@ -37,30 +37,30 @@
             <joint name="OBJRx" pos="0 0 0" axis="1 0 0" class="freejoint" />
             <joint name="OBJRy" pos="0 0 0" axis="0 1 0" class="freejoint" />
             <joint name="OBJRz" pos="0 0 0" axis="0 0 1" class="freejoint" />
-            <geom name="fryingpan_visual" class="object_visual" mesh="fryingpan" rgba="0.1 0.1 0.1 1.0" />
-            <geom name="fryingpan_contact0" class="object_contact" mesh="contact0"  />
-            <geom name="fryingpan_contact1" class="object_contact" mesh="contact1"  />
-            <geom name="fryingpan_contact2" class="object_contact" mesh="contact2"  />
-            <geom name="fryingpan_contact3" class="object_contact" mesh="contact3"  />
-            <geom name="fryingpan_contact4" class="object_contact" mesh="contact4"  />
-            <geom name="fryingpan_contact5" class="object_contact" mesh="contact5"  />
-            <geom name="fryingpan_contact6" class="object_contact" mesh="contact6"  />
-            <geom name="fryingpan_contact7" class="object_contact" mesh="contact7"  />
-            <geom name="fryingpan_contact8" class="object_contact" mesh="contact8"  />
-            <geom name="fryingpan_contact9" class="object_contact" mesh="contact9"  />
-            <geom name="fryingpan_contact10" class="object_contact" mesh="contact10"  />
-            <geom name="fryingpan_contact11" class="object_contact" mesh="contact11"  />
-            <geom name="fryingpan_contact12" class="object_contact" mesh="contact12"  />
-            <geom name="fryingpan_contact13" class="object_contact" mesh="contact13"  />
-            <geom name="fryingpan_contact14" class="object_contact" mesh="contact14"  />
-            <geom name="fryingpan_contact15" class="object_contact" mesh="contact15"  />
-            <geom name="fryingpan_contact16" class="object_contact" mesh="contact16"  />
-            <geom name="fryingpan_contact17" class="object_contact" mesh="contact17"  />
-            <geom name="fryingpan_contact18" class="object_contact" mesh="contact18"  />
-            <geom name="fryingpan_contact19" class="object_contact" mesh="contact19"  />
-            <geom name="fryingpan_contact20" class="object_contact" mesh="contact20"  />
-            <geom name="fryingpan_contact21" class="object_contact" mesh="contact21"  />
-            <geom name="fryingpan_contact22" class="object_contact" mesh="contact22"  />
+            <geom solref=".0005 1" name="fryingpan_visual" class="object_visual" mesh="fryingpan" rgba="0.1 0.1 0.1 1.0" />
+            <geom solref=".0005 1" name="fryingpan_contact0" class="object_contact" mesh="contact0"  />
+            <geom solref=".0005 1" name="fryingpan_contact1" class="object_contact" mesh="contact1"  />
+            <geom solref=".0005 1" name="fryingpan_contact2" class="object_contact" mesh="contact2"  />
+            <geom solref=".0005 1" name="fryingpan_contact3" class="object_contact" mesh="contact3"  />
+            <geom solref=".0005 1" name="fryingpan_contact4" class="object_contact" mesh="contact4"  />
+            <geom solref=".0005 1" name="fryingpan_contact5" class="object_contact" mesh="contact5"  />
+            <geom solref=".0005 1" name="fryingpan_contact6" class="object_contact" mesh="contact6"  />
+            <geom solref=".0005 1" name="fryingpan_contact7" class="object_contact" mesh="contact7"  />
+            <geom solref=".0005 1" name="fryingpan_contact8" class="object_contact" mesh="contact8"  />
+            <geom solref=".0005 1" name="fryingpan_contact9" class="object_contact" mesh="contact9"  />
+            <geom solref=".0005 1" name="fryingpan_contact10" class="object_contact" mesh="contact10"  />
+            <geom solref=".0005 1" name="fryingpan_contact11" class="object_contact" mesh="contact11"  />
+            <geom solref=".0005 1" name="fryingpan_contact12" class="object_contact" mesh="contact12"  />
+            <geom solref=".0005 1" name="fryingpan_contact13" class="object_contact" mesh="contact13"  />
+            <geom solref=".0005 1" name="fryingpan_contact14" class="object_contact" mesh="contact14"  />
+            <geom solref=".0005 1" name="fryingpan_contact15" class="object_contact" mesh="contact15"  />
+            <geom solref=".0005 1" name="fryingpan_contact16" class="object_contact" mesh="contact16"  />
+            <geom solref=".0005 1" name="fryingpan_contact17" class="object_contact" mesh="contact17"  />
+            <geom solref=".0005 1" name="fryingpan_contact18" class="object_contact" mesh="contact18"  />
+            <geom solref=".0005 1" name="fryingpan_contact19" class="object_contact" mesh="contact19"  />
+            <geom solref=".0005 1" name="fryingpan_contact20" class="object_contact" mesh="contact20"  />
+            <geom solref=".0005 1" name="fryingpan_contact21" class="object_contact" mesh="contact21"  />
+            <geom solref=".0005 1" name="fryingpan_contact22" class="object_contact" mesh="contact22"  />
         </body>
     </worldbody>
 </mujoco>
