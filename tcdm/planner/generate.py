@@ -89,6 +89,7 @@ def motion_plan_one_obj(obj_list,
     for obj_name in obj_list:
         obj_path = get_path(obj_name)
         objects.append(trimesh.load(obj_path))
+        # objects.append(trimesh.load(file_obj = trimesh.util.wrap_as_stream(obj_path), file_type='stl')) # load from string
     
     # TODO: naming to specify w at front or back?
     def X_to_Z(pose):  # from extrinsic xyz to (w,x,y,z)
