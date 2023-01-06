@@ -15,7 +15,7 @@ move_obj_target_X = [0.001307-0.03, 0.03177+0.05, -0.1743+0.2+0.04,
                       -3.05750797, 0.08599904, -1.99028331+1]
 ignore_collision_obj_idx_all = []
 save_path = f'./new_agents/{obj_list[0]}_{obj_list[1]}_pass1/traj_0.npz'
-visualize = True
+visualize = False
 
 # run
 motion_plan_one_obj(obj_list=obj_list,
@@ -39,7 +39,7 @@ move_obj_target_X[3] += 0.3    # pitch up a bit
 move_obj_target_X[4] += 0.3 
 ignore_collision_obj_idx_all = [0]  # ignore collision with banana
 save_path = f'./new_agents/{obj_list[0]}_{obj_list[1]}_pass1/traj_1.npz'
-visualize = True
+visualize = False
 
 # run
 motion_plan_one_obj(obj_list=obj_list,

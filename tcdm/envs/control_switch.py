@@ -111,6 +111,7 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
     def initialize_episode(self, physics):
         # This works for now for running visualization but not sure if the correct practice
         self._step_count = 0
+        self.during_switch = False
 
         self.additional_step_cnt = 0 # step after the reference motion is done
         self.additional_step = False # whether to step after the reference motion is done
@@ -163,7 +164,16 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
 
     def after_step(self, physics):
         super().after_step(physics)
-        print('step: ', self._step_count, ' current object index: ', self.curr_move_obj_idx)
+        if self.during_switch:
+            if self.additional_step_cnt < self.smooth_loosen_steps:
+                prefix = 'switch: loose hand'
+            else:
+                prefix = 'switch: move hand'
+        else:
+            prefix = ''
+        # prefix = 'switch' if self.during_switch else ''
+        step = self.additional_step_cnt if self.during_switch else self._step_count
+        print(f'{prefix} step: ', step, ' current object index: ', self.curr_move_obj_idx)
         switch = self.check_switch(physics)
 
         if self.ref_only: # set position of objects (according to reference) and hand (fixed)
@@ -188,9 +198,10 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
 
         if switch:
             if self.additional_step_cnt < self.smooth_loosen_steps:
-                self.loosen_hand(physics)
+                self.loosen_hand(physics)  # loosen the hand 
             elif self.additional_step_cnt < self.smooth_loosen_steps + self.smooth_move_steps:
-                self.move_hand_to_target(physics)
+                self.move_hand_to_target(physics, self.target_hand_qpos)  # move hand to the pre-grasp pose for next object
+                # self.move_hand_to_target(physics) 
             else:
                 self.additional_step_cnt = 0
                 self.additional_step = False
@@ -201,50 +212,19 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
 
 
     def switch_obj(self, physics):
-        if self.switch_num == self.switch_num_max:   # terminate episode
-            return False
-        self.switch_num += 1
-        if self.move_obj_seq is None:
-            self.curr_move_obj_idx = self.switch_num
-        else:
-            self.curr_move_obj_idx = self.move_obj_seq[self.switch_num]
-        object_name = self.move_obj_seq[self.curr_move_obj_idx]
-        traj_path = f'./{self.traj_folder}/traj_{self.switch_num}.npz'
-        if not self.use_saved_traj:
-            cur_qpos = copy.deepcopy(physics.data.qpos[30:].reshape(-1, 6))
-            cur_qpos[:, 2] += -self.z_global_local_offset   # local to global...
-            traj, _ = motion_plan_one_obj(
-                obj_list=[name.split('/')[0] for name in self.obj_names], 
-                move_obj_idx=self.curr_move_obj_idx, 
-                obj_Xs=cur_qpos.tolist(),  # get current object poses
-                move_obj_target_X=self.target_obj_Xs[self.curr_move_obj_idx], 
-                save_path=traj_path,
-                ignore_collision_obj_idx_all=[idx for idx in range(len(self.obj_names)) if idx != self.curr_move_obj_idx],  # ignore collision with all other objects
-                visualize=False) # TODO: cfg for visualize
-
-        # TODO: directly pass trajectory instead of saving to file
-        self.reference_motion = HandObjectReferenceMotion(object_name, traj_path)
+        # update to the next
+        self.reference_motion = self.next_reference_motion
+        self.switch_num = self.next_switch_num
+        self.curr_move_obj_idx = self.next_move_obj_idx
 
         # reset hand pose
-        start_state = self.reference_motion.reset()[self._init_key]
-        
-        # object offset in global frame
-        original_pan_ini_pose = [0.00130683,  0.03177048, -0.17431791+0.2] # reference_motion.reset()[self._init_key]['position'][30:33] in original banana env, z+0.2 to global frame
-        self.offset = start_state[str(self.curr_move_obj_idx)]['position'][:3] - original_pan_ini_pose # 3 of 6 as xyz
-        print(self.offset)
-
-        physics.data.qpos[:30] = start_state['position']   # TODO for different object, this ini pose can be different
-        # physics.data.qpos[:3] -= self.offset
-        # add object offset for hand; global to local (qpos)
-        physics.data.qpos[0] -= self.offset[0]
-        physics.data.qpos[1] += self.offset[2]
-        physics.data.qpos[2] += self.offset[1]
-        physics.data.qpos[2] += self.avoid_collision_z_shift
-        # physics.data.qvel[:30] = start_state['velocity']  # not zero
+        physics.data.qpos[:30] = self.target_hand_qpos
         physics.data.qvel[:30] = np.zeros(30)
 
         # Reset step
         self._step_count = 0
+
+        self.during_switch = False
 
     def loosen_hand(self, physics, ):
         self.additional_step_cnt +=1
@@ -279,7 +259,47 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
 
     def check_switch(self, physics):
         switch = self.reference_motion.next_done
+        if switch and not self.during_switch:
+            self.during_switch = True
+            if self.switch_num == self.switch_num_max:   # terminate episode
+                return False
+            self.next_switch_num = self.switch_num + 1
+            if self.move_obj_seq is None:
+                self.next_move_obj_idx = self.next_switch_num
+            else:
+                self.next_move_obj_idx = self.move_obj_seq[self.next_switch_num]
+            object_name = self.move_obj_seq[self.next_move_obj_idx]
+            traj_path = f'./{self.traj_folder}/traj_{self.next_switch_num}.npz'
+            if not self.use_saved_traj:
+                cur_qpos = copy.deepcopy(physics.data.qpos[30:].reshape(-1, 6))
+                cur_qpos[:, 2] += -self.z_global_local_offset   # local to global...
+                traj, _ = motion_plan_one_obj(
+                    obj_list=[name.split('/')[0] for name in self.obj_names], 
+                    move_obj_idx=self.next_move_obj_idx, 
+                    obj_Xs=cur_qpos.tolist(),  # get current object poses
+                    move_obj_target_X=self.target_obj_Xs[self.next_move_obj_idx], 
+                    save_path=traj_path,
+                    ignore_collision_obj_idx_all=[idx for idx in range(len(self.obj_names)) if idx != self.next_move_obj_idx],  # ignore collision with all other objects
+                    visualize=False) # TODO: cfg for visualize
+
+            # TODO: directly pass trajectory instead of saving to file
+            self.next_reference_motion = HandObjectReferenceMotion(object_name, traj_path)
             
+            # reset hand pose
+            start_state = self.next_reference_motion.reset()[self._init_key]
+            
+            # object offset in global frame
+            original_pan_ini_pose = [0.00130683,  0.03177048, -0.17431791+0.2] # reference_motion.reset()[self._init_key]['position'][30:33] in original banana env, z+0.2 to global frame
+            self.offset = start_state[str(self.next_move_obj_idx)]['position'][:3] - original_pan_ini_pose # 3 of 6 as xyz
+            print(self.offset)
+
+            self.target_hand_qpos = start_state['position'][:30]
+            # add object offset for hand; global to local (qpos)
+            self.target_hand_qpos[0] -= self.offset[0]
+            self.target_hand_qpos[1] += self.offset[2]
+            self.target_hand_qpos[2] += self.offset[1]
+            self.target_hand_qpos[2] += self.avoid_collision_z_shift
+
         return switch
 
 
