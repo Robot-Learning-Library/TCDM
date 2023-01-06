@@ -353,39 +353,40 @@ class GeneralReferenceMotionTask(SingleObjectTask):
 
     def get_termination(self, physics):
         # for training
-        # if self.reference_motion.next_done:
-        #     return 0.0
-        # return super().get_termination(physics)
+        if self.reference_motion.next_done:
+            return 0.0
+        return super().get_termination(physics)
 
         # after training
-        if not self.ref_only and self.reference_motion.next_done:
-            # if done, additional steps for openning the hand
-            # this will not affect the reward
-            smooth_loosen_steps = 30
-            self.additional_step_cnt +=1
-            target_hand_pose = np.zeros(24)   # fully open hand pose
-            # target_hand_pose = self.start_state['position'][6:30]  # set hand to initial joint position
-            if self.additional_step_cnt == 1: 
-                self.end_hand_pose = copy.deepcopy(physics.data.qpos[:6])
-                self.end_hand_joint_pose = copy.deepcopy(physics.data.qpos[6:30])
-                self.end_obj_pose = copy.deepcopy(physics.data.qpos[30:])
+        # if not self.ref_only and self.reference_motion.next_done:
+        #     # if done, additional steps for openning the hand
+        #     # this will not affect the reward
+        #     smooth_loosen_steps = 30
+        #     self.additional_step_cnt +=1
+        #     target_hand_pose = np.zeros(24)   # fully open hand pose
+        #     # target_hand_pose = self.start_state['position'][6:30]  # set hand to initial joint position
+        #     if self.additional_step_cnt == 1: 
+        #         self.end_hand_pose = copy.deepcopy(physics.data.qpos[:6])
+        #         self.end_hand_joint_pose = copy.deepcopy(physics.data.qpos[6:30])
+        #         self.end_obj_pose = copy.deepcopy(physics.data.qpos[30:])
 
-            # smoothly move to target hand pose (not grasping object)
-            if self.additional_step_cnt <= smooth_loosen_steps:
-                physics.data.qpos[6:30] = self.end_hand_joint_pose + (target_hand_pose - self.end_hand_joint_pose)*self.additional_step_cnt/smooth_loosen_steps  # set hand to initial joint position
-            else:
-                physics.data.qpos[6:30] = target_hand_pose
+        #     # smoothly move to target hand pose (not grasping object)
+        #     if self.additional_step_cnt <= smooth_loosen_steps:
+        #         physics.data.qpos[6:30] = self.end_hand_joint_pose + (target_hand_pose - self.end_hand_joint_pose)*self.additional_step_cnt/smooth_loosen_steps  # set hand to initial joint position
+        #     else:
+        #         physics.data.qpos[6:30] = target_hand_pose
 
-            # set fixed obj and hand pose
-            # physics.data.qpos[:6] = self.end_hand_pose
-            # physics.data.qpos[30:] = self.end_obj_pose
+        #     # set fixed obj and hand pose
+        #     # physics.data.qpos[:6] = self.end_hand_pose
+        #     physics.data.qpos[30:] = self.end_obj_pose
+        #     physics.data.qvel[30:] = 0
 
-            self.additional_step = True
-            if self.additional_step_cnt > 150:
-                return 0.0
-            else:
-                None
-        return super().get_termination(physics)
+        #     self.additional_step = True
+        #     if self.additional_step_cnt > 150:
+        #         return 0.0
+        #     else:
+        #         None
+        # return super().get_termination(physics)
 
 
 _FLOAT_EPS = np.finfo(np.float64).eps
