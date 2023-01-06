@@ -5,6 +5,7 @@
 
 import numpy as np
 import copy
+import os
 
 from tcdm.envs.reference import HandObjectReferenceMotion
 from tcdm.util.geom import quat2euler
@@ -44,11 +45,24 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
 
         # object offset in global frame
         self.avoid_collision_z_shift = 0.0
-        original_banana_ini_pose = [ 0.01895152, -0.01185687, -0.17970488+0.2]  # reference_motion.reset()[self._init_key]['position'][30:33] in original banana env, z+0.2 to global frame
+        self.current_object_name = self.obj_names[self.curr_move_obj_idx].split('/')[0]  # 'banana/object' to 'banana'
+        ori_obj_ini_pose = self._get_obj_ini_pose(self.current_object_name)
         start_state = self.reference_motion.reset()[self._init_key]
-        self.offset = start_state[str(self.curr_move_obj_idx)]['position'][:3] - original_banana_ini_pose # 3 of 6 as xyz
+        self.offset = start_state[str(self.curr_move_obj_idx)]['position'][:3] - ori_obj_ini_pose # xyz shift of object from the center; 3 of 6 dims as xyz
         print(self.offset)        
         super().__init__(obj_names[0], reward_fns, reward_weights, random=None)
+
+    def _get_obj_ini_pose(self, object_name):
+        ref_traj_file_path = './trajectories'
+        for filename in os.listdir(ref_traj_file_path):
+            if object_name in filename and '.npz' in filename:
+                ref_traj_file = os.path.join(ref_traj_file_path, filename)
+                break
+        # import  pdb; pdb.set_trace()
+        ori_obj_reference_motion = HandObjectReferenceMotion(object_name, ref_traj_file)
+        ori_obj_pose = ori_obj_reference_motion.reset()[self._init_key]['position'][30:33] 
+        ori_obj_pose[2] -= self.z_global_local_offset  # z+0.2 to global frame
+        return ori_obj_pose
 
     @property
     def substeps(self):
@@ -268,7 +282,7 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
                 self.next_move_obj_idx = self.next_switch_num
             else:
                 self.next_move_obj_idx = self.move_obj_seq[self.next_switch_num]
-            object_name = self.move_obj_seq[self.next_move_obj_idx]
+            self.current_object_name = self.obj_names[self.next_move_obj_idx].split('/')[0]
             traj_path = f'./{self.traj_folder}/traj_{self.next_switch_num}.npz'
             if not self.use_saved_traj:
                 cur_qpos = copy.deepcopy(physics.data.qpos[30:].reshape(-1, 6))
@@ -283,14 +297,14 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
                     visualize=False) # TODO: cfg for visualize
 
             # TODO: directly pass trajectory instead of saving to file
-            self.next_reference_motion = HandObjectReferenceMotion(object_name, traj_path)
+            self.next_reference_motion = HandObjectReferenceMotion(self.current_object_name, traj_path)
             
             # reset hand pose
             start_state = self.next_reference_motion.reset()[self._init_key]
             
             # object offset in global frame
-            original_pan_ini_pose = [0.00130683,  0.03177048, -0.17431791+0.2] # reference_motion.reset()[self._init_key]['position'][30:33] in original banana env, z+0.2 to global frame
-            self.offset = start_state[str(self.next_move_obj_idx)]['position'][:3] - original_pan_ini_pose # 3 of 6 as xyz
+            ori_obj_ini_pose = self._get_obj_ini_pose(self.current_object_name)
+            self.offset = start_state[str(self.next_move_obj_idx)]['position'][:3] - ori_obj_ini_pose # 3 of 6 as xyz
             print(self.offset)
 
             self.target_hand_qpos = start_state['position'][:30]

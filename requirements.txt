@@ -15,3 +15,5 @@ imageio
 imageio-ffmpeg
 tensorboard
 pyyaml
+trimesh
+rtree
