@@ -16,8 +16,8 @@ wandb/*
 scratch/*
 pretrained_agents/*
 *.log
-*.npz
+# *.npz
 log/*
-*.zip
+# *.zip
 *.csv
 outputs/*

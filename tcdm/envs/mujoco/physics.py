@@ -8,7 +8,8 @@ import yaml, cv2
 import numpy as np
 from dm_control import mjcf
 from tcdm.envs import asset_abspath
-from tcdm.motion_util import PoseAndVelocity
+from tcdm.util.motion import PoseAndVelocity
+# from mujoco_py.const import EQ_WELD
 
 
 ROBOT_CONFIGS = yaml.safe_load(open(asset_abspath('robot_config.yaml'), 'r'))
@@ -27,7 +28,9 @@ def physics_from_mjcf(env, robot_name=None, gravity_compensation_for_all=False):
         elif 'franka' in xml:
             robot_name = 'franka'
         else:
-            raise NotImplementedError
+            print('Load object only!')
+            robot_name = 'object'
+            # raise NotImplementedError
     
     if robot_name == 'adroit':
         if gravity_compensation_for_all:
@@ -40,9 +43,12 @@ def physics_from_mjcf(env, robot_name=None, gravity_compensation_for_all=False):
         return DManusPhysics.from_mjcf_model(mjcf_model)
     elif robot_name == 'franka':
         return FrankaPhysics.from_mjcf_model(mjcf_model)
+    elif robot_name == 'object':
+        return ObjPhysics.from_mjcf_model(mjcf_model)
     raise NotImplementedError
 
 
+    
 class _Physics(mjcf.Physics):
     _ROBOT_NAME = None
 
@@ -91,6 +97,68 @@ class _Physics(mjcf.Physics):
     @property
     def ctrl_range(self):
         return self.model.actuator_ctrlrange
+
+
+class _Physics_Obj(mjcf.Physics):
+    _ROBOT_NAME = None
+
+    def set_control(self, action):
+        super().set_control(action)
+
+        # Set mocap action
+        # print('mocap: ', self.data.mocap_pos)
+
+        # self.data.mocap_pos[0,2] = self.data.mocap_pos[0,2] + 0.001
+        # import time
+        # time.sleep(1)
+        # self.data.mocap_quat[:] = self.data.mocap_quat + quat_delta
+
+        # applies gravity compensation to robot joints
+        # grav_comp = self.named.data.qfrc_bias[:self.adim]
+        # self.named.data.qfrc_applied[:self.adim] = grav_comp
+        grav_comp = self.named.data.qfrc_bias[:]
+        self.named.data.qfrc_applied[:] = grav_comp
+
+    @property
+    def adim(self):
+        return self.model.nu
+
+    @property
+    def ctrl_range(self):
+        return self.model.actuator_ctrlrange
+
+
+    # def reset_mocap2body_xpos(self):
+    #     """Resets the position and orientation of the mocap bodies to the same
+    #     values as the bodies they're welded to.
+    #     """
+
+    #     if (self.model.eq_type is None or
+    #         self.model.eq_obj1id is None or
+    #         self.model.eq_obj2id is None):
+    #         return
+    #     for eq_type, obj1_id, obj2_id in zip(self.model.eq_type,
+    #                                          self.model.eq_obj1id,
+    #                                          self.model.eq_obj2id):
+    #         # if eq_type != EQ_WELD:
+    #         #     continue
+
+    #         mocap_id = self.model.body_mocapid[obj1_id]
+    #         if mocap_id != -1:
+    #             # obj1 is the mocap, obj2 is the welded body
+    #             body_idx = obj2_id
+    #         else:
+    #             # obj2 is the mocap, obj1 is the welded body
+    #             mocap_id = self.model.body_mocapid[obj2_id]
+    #             body_idx = obj1_id
+
+    #         assert (mocap_id != -1)
+    #         self.data.mocap_pos[mocap_id][:] = self.data.xpos[body_idx]
+    #         self.data.mocap_quat[mocap_id][:] = self.data.xquat[body_idx]
+
+
+class ObjPhysics(_Physics_Obj):
+    _ROBOT_NAME = 'object'
 
 class AdroitPhysics(_Physics):
     _ROBOT_NAME = 'adroit'

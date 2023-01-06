@@ -41,7 +41,7 @@ def rollout(save_folder, writer):
     o, t = config['env']['name'].split('-')
     config['env']['task_kwargs']['ref_only'] = True
     # config['env']['task_kwargs']['auto_ref'] = True
-    config['env']['task_kwargs']['traj_path'] = 'trajectories/generated_trajs'
+    # config['env']['task_kwargs']['traj_path'] = 'trajectories/generated_trajs'
     env = suite.load(o, t, config['env']['task_kwargs'], gym_wrap=True)
     policy = PPO.load(os.path.join(save_folder, 'checkpoint.zip'))
 
@@ -70,13 +70,13 @@ if __name__ == "__main__":
                 if args.render:
                     video_folder = f'obj_traj_video/'
                     os.makedirs(video_folder, exist_ok=True)
-                    writer = imageio.get_writer(f'{video_folder}/{args.env}.mp4',quality=10, fps=45)
+                    writer = imageio.get_writer(f'{video_folder}/{args.env}.mp4',quality=10, fps=25) # the default video fps=25 in original data
                     rollout(args.save_folder, writer)
                     writer.close()
                 else:
                     rollout(args.save_folder, None)
             except:
-                print('Env: {env} not work.')
+                print(f'Env: {env} not work.')
     else: #parse one env
         args.save_folder = f'pretrained_agents/{args.env}/'
         if args.render:

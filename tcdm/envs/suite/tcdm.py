@@ -10,6 +10,7 @@ from tcdm.envs import mj_models, traj_abspath, generated_traj_abspath
 from tcdm.envs import asset_abspath
 from dm_control.utils import containers
 from tcdm.envs.control import Environment, ReferenceMotionTask, GeneralReferenceMotionTask
+from tcdm.envs.control_switch import GeneralReferenceMotionSwitchTask
 from tcdm.envs.reference import HandObjectReferenceMotion
 from tcdm.envs.rewards import ObjectMimic
 from tcdm.envs.mujoco import physics_from_mjcf
@@ -20,6 +21,7 @@ class ObjMimicTask(GeneralReferenceMotionTask):
                        pregrasp_init_key, ref_only=False, auto_ref=False, task_name=None, traj_path=None):
         reference_motion = HandObjectReferenceMotion(object_name, data_path)
         reward_fn = ObjectMimic(**reward_kwargs)
+        self._multi_obj = False
         self._append_time = append_time
         # super().__init__(reference_motion, [reward_fn], pregrasp_init_key)  # for ReferenceMotionTask
         super().__init__(reference_motion, [reward_fn], pregrasp_init_key, data_path, ref_only, auto_ref, task_name, object_name, traj_path)
@@ -36,6 +38,47 @@ class ObjMimicTask(GeneralReferenceMotionTask):
         return obs
 
 
+class ObjMimicSwitchTask(GeneralReferenceMotionSwitchTask):
+    def __init__(self, object_names, 
+                       data_path, 
+                       reward_kwargs, 
+                       append_time, 
+                       pregrasp_init_key, 
+                       ref_only,
+                       float_obj_seq,
+                       target_obj_Xs, 
+                       traj_folder,
+                       use_saved_traj,
+                       ):
+        # first trajectory
+        reference_motion = HandObjectReferenceMotion(object_names[0], data_path)
+        reward_fn = ObjectMimic(**reward_kwargs)
+        self._append_time = append_time
+        super().__init__(reference_motion, 
+                         [reward_fn], 
+                         pregrasp_init_key, 
+                         object_names,
+                         ref_only,
+                         float_obj_seq,
+                         target_obj_Xs,
+                         traj_folder,
+                         use_saved_traj,
+                         )
+
+
+    def get_observation(self, physics):
+        obs = super().get_observation(physics)
+        
+        # append time to observation if needed
+        if self._append_time:
+            t = self.reference_motion.time
+            t = np.array([1, 4, 6, 8]) * t
+            t = np.concatenate((np.sin(t), np.cos(t)))
+            obs['state'] = np.concatenate((obs['state'], t))
+        return obs
+
+    
+    
 class Sim2RealMimicTask(ObjMimicTask):
     def initialize_episode(self, physics):
         friction = [self.U(0.3, 0.7), self.U(0.0001,0.005), self.U(0.00001,0.0002)]
@@ -50,7 +93,7 @@ class Sim2RealMimicTask(ObjMimicTask):
 
 
 def _obj_mimic_task_factory(domain_name, name, object_class, robot_class, target_path):
-    def task(append_time=True, pregrasp='initialized', ref_only=False, auto_ref=False, traj_path=None, reward_kwargs={}, environment_kwargs={}):
+    def task(append_time=True, pregrasp='initialized', obj_only=False, ref_only=False, auto_ref=False, traj_path=None, reward_kwargs={}, environment_kwargs={}):
         """
         ref_only: only visualize object reference trajectory, the hand is hanging
         auto_ref: automatically generate reference trajectory at the start of each episode
@@ -59,7 +102,8 @@ def _obj_mimic_task_factory(domain_name, name, object_class, robot_class, target
         object_model = object_class()
         object_name = '{}/object'.format(object_model.mjcf_model.model)
         env = mj_models.TableEnv()
-        env.attach(robot_class(limp=False))
+        if not obj_only:
+            env.attach(robot_class(limp=False))
         env.attach(object_model)
 
         # build task using reference motion data

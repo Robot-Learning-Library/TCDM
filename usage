@@ -1,5 +1,9 @@
+# banana policy
 python rollout.py --save_folder outputs/2022-11-06/12-00-55  --render
+# cup policy
 python rollout.py --save_folder outputs/2022-11-18/03-10-51  --render
+# pan policy
+python rollout.py --save_folder outputs/2022-12-29/03-52-52  --render
 
 pretrained mug:
 python rollout.py --save_folder outputs/2022-11-16/19-27-32  --render
@@ -9,3 +13,21 @@ pretrained cup:
 python rollout.py --save_folder outputs/2022-11-24/21-42-24  --render
 train with pretrained cup:
 python rollout.py --save_folder outputs/2022-11-25/03-45-35  --render
+
+multiple object task banana_cup_pass1
+python visualize.py --save_folder new_agents/banana_cup_pass1
+
+generete video for original trajectory:
+python generate_traj_video.py --render --env hammer_use1
+for all:
+python generate_traj_video.py --render --env all
+
+# multiple objects manipulation
+python planner.py
+python rollout.py --save_folder new_agents/banana_cup_pass1 --checkpoint outputs/2022-11-06/12-00-55 --traj_path new_agents/ --render
+python rollout.py --save_folder new_agents/banana_fryingpan_pass1 --ref_only True --render
+# not ref only
+python rollout.py --save_folder new_agents/banana_fryingpan_pass1 --render
+
+
+python visualize.py --save_folder new_agents/banana_fryingpan_pass1
