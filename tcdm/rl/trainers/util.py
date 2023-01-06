@@ -59,8 +59,8 @@ class FallbackCheckpoint(BaseCallback):
 
 def _env_maker(name, task_kwargs, env_kwargs, info_keywords, state_keyword):
     np.random.seed()
-    domain, task = name.split('-')
-    env = suite.load(domain, task, OmegaConf.to_container(task_kwargs), 
+    #domain, task = name.split('-')
+    env = suite.load(name, OmegaConf.to_container(task_kwargs), 
                      dict(env_kwargs), gym_wrap=True)
     env = Monitor(env, info_keywords=tuple(info_keywords))
     env = _ObsExtractor(env, state_keyword)

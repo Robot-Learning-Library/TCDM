@@ -168,7 +168,7 @@ class ObjectMimic(RewardFunction):
         obj_com = physics.named.data.xipos[self._object_name].copy()
         terminate = norm2(obj_com - tgt_obj_com) >= self.obj_com_term ** 2
         # terminate = norm2(obj_com - tgt_obj_com) >= 2*self.obj_com_term ** 2  # harder to terminate
-        print('Terminate due to large divergence.') if terminate else None
+        #print('Terminate due to large divergence.') if terminate else None
         return terminate  
 
     def _object_reward_scale(self):
