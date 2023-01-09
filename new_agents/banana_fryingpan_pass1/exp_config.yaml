@@ -31,7 +31,9 @@ defaults:
 env:
   #!
   multi_obj: True
-  #1
+  obj_only: False
+  switch: True
+  #
   env_kwargs: {}
   info_keywords:
   - obj_err

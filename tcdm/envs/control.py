@@ -142,7 +142,7 @@ class Task(control.Task):
         return reward
 
     def get_termination(self, physics):
-        if not self.additional_step:
+        if not self.additional_step and not self.ref_only:
             for reward_fn in self._reward_fns:
                 if reward_fn.check_termination(physics):
                     return 0.0

@@ -47,6 +47,13 @@ def interpolate_quat(R_init, R_end, num_point):
     return x_new, y_new
 
 
+def load_motion(motion_file):
+    motion_file = np.load(motion_file, allow_pickle=True)
+    reference_motion =  {k:v for k, v in motion_file.items()}
+    reference_motion['s_0'] = reference_motion['s_0'][()]
+    return reference_motion
+
+
 def motion_plan_one_obj(obj_list, 
                         move_obj_idx, 
                         obj_Xs, 
@@ -56,6 +63,7 @@ def motion_plan_one_obj(obj_list,
                         collision_threshold=0.003,
                         p_bound_buffer=0.1, 
                         q_bound_buffer=0.2,
+                        ref_traj_file_path='./trajectories',
                         visualize=False):
     """_summary_
 
@@ -186,16 +194,9 @@ def motion_plan_one_obj(obj_list,
         # orientation_tcdm += [tuple([q[-1]]+list(q[:3]))]  # (x,y,z,w) -> (w,x,y,z)
         orientation_tcdm += [path[3:]]
 
-    # Save trajectory - use an arbitrary trajectory as template
-    def load_motion(motion_file):
-        motion_file = np.load(motion_file, allow_pickle=True)
-        reference_motion =  {k:v for k, v in motion_file.items()}
-        reference_motion['s_0'] = reference_motion['s_0'][()]
-        return reference_motion
-
     # get the reference motion of corresponding object
     object_name = obj_list[move_obj_idx]
-    ref_traj_file_path = './trajectories'
+    # ref_traj_file_path = './trajectories'
     for filename in os.listdir(ref_traj_file_path):
         if object_name in filename and '.npz' in filename:
             ref_traj_file = os.path.join(ref_traj_file_path, filename)
@@ -333,127 +334,164 @@ def rrt(collision_checker,
     return path, path_full
 
 
-def motion_plan(target_obj_path, 
-                float_obj_path, 
-                traj_path, 
-                collision_threshold=0.003, 
-                q_bound_buffer=0.2):
-    # Load meshes
-    target_obj = trimesh.load(target_obj_path)
-    float_obj = trimesh.load(float_obj_path)
-    # print(target_obj.bounds)
-    # target_obj.show()
-
-    # Initial pose of the target and float objects - x,y,z,r,p,y - Euler extrinsic XYZ convention
-    float_obj_X_init_r_array = [0.01895152, -0.01185687, 0.021, -3.05750797, 0.08599904, -1.99028331]  # from banana_pass1.npz
-    float_obj_X_init_array = float_obj_X_init_r_array[:3] + euler2quat(float_obj_X_init_r_array[3:]).tolist()   # convert to quat (w,x,y,z)
-    # float_obj_X_init_array = [0.05, 0.0, 0-0.2+0.023, 0.0, 0.0, 0.0]  # account for 20cm offset in z when loading objects in tcdm
-    # target_obj_X_array = [-0.02, -0.165, 0-z_offset+0.04, 0.0, 0.0, 0.0]
-    target_obj_X_array_r_array = [-0.2, -0.165, 0.04, 0.0, 0.0, 0.0]  # avoid collision with the cup
-    target_obj_X_array = target_obj_X_array_r_array[:3] + euler2quat(target_obj_X_array_r_array[3:]).tolist()
-    float_obj_X_init = get_transform(float_obj_X_init_array)
-    target_obj_X = get_transform(target_obj_X_array)
-
-    # Final pose of the float object
-    float_obj_X_end_r_array = target_obj_X_array_r_array.copy()
-    float_obj_X_end_r_array[1] -= 0.01 
-    float_obj_X_end_r_array[2] += 0.149
-    float_obj_X_end_r_array[-2] = -1.57
-    float_obj_X_end_array = float_obj_X_end_r_array[:3] + euler2quat(float_obj_X_end_r_array[3:]).tolist()
-    float_obj_X_end = get_transform(float_obj_X_end_array)
-
-    # Configuration space boundaries - use quaternions of initial and end poses, plus some buffer
-    pose_lower = np.array([-0.1, -0.2, -0.2,  -1, -1, -1, -1])
-    pose_upper = np.array([ 0.1,  0.2,  0.2,  1,  1,  1,  1])
-    q_min = np.minimum(float_obj_X_init_array[3:], float_obj_X_end_array[3:]) - q_bound_buffer
-    q_max = np.maximum(float_obj_X_init_array[3:], float_obj_X_end_array[3:]) + q_bound_buffer
-    pose_lower[3:] = q_min
-    pose_upper[3:] = q_max
-
-    # Visualize the final scene
-    scene_end = trimesh.scene.scene.Scene()
-    scene_end.add_geometry(target_obj, transform=target_obj_X)
-    scene_end.add_geometry(float_obj, transform=float_obj_X_end)
-    scene_end.add_geometry(float_obj, transform=float_obj_X_init)
-    scene_end.show()
-
-    # Collision checking
-    collision_checker = trimesh.collision.CollisionManager()
-    collision_checker.add_object('target', target_obj, target_obj_X)
-    collision_checker.add_object('float', float_obj, float_obj_X_end)
-    # import time
-    # s1 = time.time()
-    print(collision_checker.in_collision_internal())    # 0.0002-0.0006s
-    print(collision_checker.min_distance_internal())    # 0.0002-0.0006s
-    # print('Time for collision checking: ', time.time()-s1)
-
-    path_full = rrt(collision_checker, pose_lower, pose_upper, float_obj, float_obj_X_init_array, float_obj_X_end_array, [target_obj], [target_obj_X], collision_threshold)
-
-    # Result
-    print('Number of points before interpolation: ', len(path))
-    print('Number of points after interpolation: ', len(path_full))
-    print('Quaternion lower bound:', pose_lower[3:])
-    print('Quaternion upper bound:', pose_upper[3:])
-    # print('Path after interpolation: ', path_full)
-    # print('Position trajectory after interpolation: ', [path[:3] for path in path_full])
-    # print('Quaternion (w,x,y,z) trajectory after interpolation: ', [path[3:] for path in path_full])
-
-    # Visualize the final scene with interpolation
-    scene_planned = trimesh.scene.scene.Scene()
-    scene_planned.add_geometry(target_obj, transform=target_obj_X)
-    for X in path_full:
-        scene_planned.add_geometry(float_obj, transform=get_transform(X))
-    scene_planned.show()
-
-    # Convert - mujoco uses (w,x,y,z)
-    translation_tcdm = []
-    orientation_tcdm = []
-    for path in path_full:
-        translation_tcdm += [path[:3]]
-        # q = R.from_euler(seq='XYZ', angles=path[3:], degrees=False).as_quat()
-        # orientation_tcdm += [tuple([q[-1]]+list(q[:3]))]  # (x,y,z,w) -> (w,x,y,z)
-        orientation_tcdm += [path[3:]]
-
-    # Save trajectory
-    def load_motion(motion_file):
-        motion_file = np.load(motion_file, allow_pickle=True)
-        reference_motion =  {k:v for k, v in motion_file.items()}
-        reference_motion['s_0'] = reference_motion['s_0'][()]
-        return reference_motion
-    
-    data = load_motion('./trajectories/banana_pass1.npz')
-    traj = copy.copy(dict(data))
-    # print(traj['s_0']['motion_planned']['position'][-6:])
-
-    traj['offset'] = np.zeros((3))
-
-    traj['s_0']['motion_planned']['position'][-6:] = np.hstack((
-        translation_tcdm[0],
-        quat2euler(orientation_tcdm[0]),
-    ))  # local frame
-
-    # fixed object
-    traj['s_0']['motion_planned']['fixed'] = {}
-    traj['s_0']['motion_planned']['fixed']['position'] = np.array(target_obj_X_array_r_array)
-
-    traj['object_translation'] = np.vstack((translation_tcdm))
-    traj['object_orientation'] = np.vstack((orientation_tcdm))
-    traj['length'] = len(translation_tcdm)
-    # traj['SIM_SUBSTEPS'] = int(data['SIM_SUBSTEPS']/3)
-    traj['DATA_SUBSTEPS'] = 1
-    # traj['offset'] = offset
-    np.savez(traj_path, **traj)  # save a dict as npz
-
-
 if __name__ == "__main__":
-    # Fixed object, e.g., a cup
-    target_obj_path = './tcdm/envs/assets/meshes/objects/cup/cup.stl'
 
-    # Moving object, e.g., a banana 
-    float_obj_path = './tcdm/envs/assets/meshes/objects/banana/banana.stl'
+    # Define objects for new plan
+    # obj_list = ['cup', 'cup']
+    obj_list = ['toruslarge', 'knife']
+    move_obj_idx = 0
+    # save_path = './new_agents/cup_cup_move1/traj_0.npz'
+    save_path = './new_agents/toruslarge_knife_move1/traj_0.npz'
 
-    # Trajectory path
-    traj_path = './trajectories/multi_trajs/banana_cup_pass1/banana_cup_pass1.npz'
+    # Open the original trajectory file and see the initial pose for determining poses of the new plan
+    # ref_traj_file = './new_agents/torus_knife_move1/toruslarge_inspect1.npz'
+    # data = load_motion(ref_traj_file)
+    # print(data['s_0'])
 
-    # Generate trajectory
-    motion_plan(target_obj_path, float_obj_path, traj_path)
+    # Define poses for new plan
+    # obj_Xs = [[-0.25, 0.1, -1.49e-01+0.2, 1.03e-04, 2.43e-04, 1.79e+00],
+    #           [-2.21e-03, 4.10e-03, -1.49e-01+0.2, 1.03e-04, 2.43e-04, 1.79e+00]]
+    # move_obj_target_X = [-0.15, 4.10e-03, -1.49e-01+0.2, 1.03e-04, 2.43e-04, 1.79e+00]  # move first cup from x=-0.25 to x=-0.10, while the fixed cup is at x=0
+    obj_Xs = [[-0.2, -1.43946832e-02,
+       -1.79232350e-01+0.2, -5.76184115e-05,  3.68892728e-05, -1.15680692e+00],
+              [3.27832237e-03+0.2, -3.30545511e-04,
+       -1.94037339e-01+0.2,  3.08262443e+00,  9.59880039e-02, -2.97606327e+00]]
+    move_obj_target_X = [0, -1.43946832e-02,
+       -1.79232350e-01+0.205, -5.76184115e-05,  3.68892728e-05, -1.15680692e+00]  # move torus from x=-0.2 to x=0, while the fixed knife is at x=0.2
+
+    # Plan
+    traj, save_path = motion_plan_one_obj(obj_list, 
+                                          move_obj_idx, 
+                                          obj_Xs, 
+                                          move_obj_target_X,
+                                          save_path,
+                                          ignore_collision_obj_idx_all=[],
+                                          collision_threshold=0.003,
+                                          p_bound_buffer=0.1, 
+                                          q_bound_buffer=0.2,
+                                          visualize=True)
+
+# def motion_plan(target_obj_path, 
+#                 float_obj_path, 
+#                 traj_path, 
+#                 collision_threshold=0.003, 
+#                 q_bound_buffer=0.2):
+#     # Load meshes
+#     target_obj = trimesh.load(target_obj_path)
+#     float_obj = trimesh.load(float_obj_path)
+#     # print(target_obj.bounds)
+#     # target_obj.show()
+
+#     # Initial pose of the target and float objects - x,y,z,r,p,y - Euler extrinsic XYZ convention
+#     float_obj_X_init_r_array = [0.01895152, -0.01185687, 0.021, -3.05750797, 0.08599904, -1.99028331]  # from banana_pass1.npz
+#     float_obj_X_init_array = float_obj_X_init_r_array[:3] + euler2quat(float_obj_X_init_r_array[3:]).tolist()   # convert to quat (w,x,y,z)
+#     # float_obj_X_init_array = [0.05, 0.0, 0-0.2+0.023, 0.0, 0.0, 0.0]  # account for 20cm offset in z when loading objects in tcdm
+#     # target_obj_X_array = [-0.02, -0.165, 0-z_offset+0.04, 0.0, 0.0, 0.0]
+#     target_obj_X_array_r_array = [-0.2, -0.165, 0.04, 0.0, 0.0, 0.0]  # avoid collision with the cup
+#     target_obj_X_array = target_obj_X_array_r_array[:3] + euler2quat(target_obj_X_array_r_array[3:]).tolist()
+#     float_obj_X_init = get_transform(float_obj_X_init_array)
+#     target_obj_X = get_transform(target_obj_X_array)
+
+#     # Final pose of the float object
+#     float_obj_X_end_r_array = target_obj_X_array_r_array.copy()
+#     float_obj_X_end_r_array[1] -= 0.01 
+#     float_obj_X_end_r_array[2] += 0.149
+#     float_obj_X_end_r_array[-2] = -1.57
+#     float_obj_X_end_array = float_obj_X_end_r_array[:3] + euler2quat(float_obj_X_end_r_array[3:]).tolist()
+#     float_obj_X_end = get_transform(float_obj_X_end_array)
+
+#     # Configuration space boundaries - use quaternions of initial and end poses, plus some buffer
+#     pose_lower = np.array([-0.1, -0.2, -0.2,  -1, -1, -1, -1])
+#     pose_upper = np.array([ 0.1,  0.2,  0.2,  1,  1,  1,  1])
+#     q_min = np.minimum(float_obj_X_init_array[3:], float_obj_X_end_array[3:]) - q_bound_buffer
+#     q_max = np.maximum(float_obj_X_init_array[3:], float_obj_X_end_array[3:]) + q_bound_buffer
+#     pose_lower[3:] = q_min
+#     pose_upper[3:] = q_max
+
+#     # Visualize the final scene
+#     scene_end = trimesh.scene.scene.Scene()
+#     scene_end.add_geometry(target_obj, transform=target_obj_X)
+#     scene_end.add_geometry(float_obj, transform=float_obj_X_end)
+#     scene_end.add_geometry(float_obj, transform=float_obj_X_init)
+#     scene_end.show()
+
+#     # Collision checking
+#     collision_checker = trimesh.collision.CollisionManager()
+#     collision_checker.add_object('target', target_obj, target_obj_X)
+#     collision_checker.add_object('float', float_obj, float_obj_X_end)
+#     # import time
+#     # s1 = time.time()
+#     print(collision_checker.in_collision_internal())    # 0.0002-0.0006s
+#     print(collision_checker.min_distance_internal())    # 0.0002-0.0006s
+#     # print('Time for collision checking: ', time.time()-s1)
+
+#     path_full = rrt(collision_checker, pose_lower, pose_upper, float_obj, float_obj_X_init_array, float_obj_X_end_array, [target_obj], [target_obj_X], collision_threshold)
+
+#     # Result
+#     print('Number of points before interpolation: ', len(path))
+#     print('Number of points after interpolation: ', len(path_full))
+#     print('Quaternion lower bound:', pose_lower[3:])
+#     print('Quaternion upper bound:', pose_upper[3:])
+#     # print('Path after interpolation: ', path_full)
+#     # print('Position trajectory after interpolation: ', [path[:3] for path in path_full])
+#     # print('Quaternion (w,x,y,z) trajectory after interpolation: ', [path[3:] for path in path_full])
+
+#     # Visualize the final scene with interpolation
+#     scene_planned = trimesh.scene.scene.Scene()
+#     scene_planned.add_geometry(target_obj, transform=target_obj_X)
+#     for X in path_full:
+#         scene_planned.add_geometry(float_obj, transform=get_transform(X))
+#     scene_planned.show()
+
+#     # Convert - mujoco uses (w,x,y,z)
+#     translation_tcdm = []
+#     orientation_tcdm = []
+#     for path in path_full:
+#         translation_tcdm += [path[:3]]
+#         # q = R.from_euler(seq='XYZ', angles=path[3:], degrees=False).as_quat()
+#         # orientation_tcdm += [tuple([q[-1]]+list(q[:3]))]  # (x,y,z,w) -> (w,x,y,z)
+#         orientation_tcdm += [path[3:]]
+
+#     # Save trajectory
+#     def load_motion(motion_file):
+#         motion_file = np.load(motion_file, allow_pickle=True)
+#         reference_motion =  {k:v for k, v in motion_file.items()}
+#         reference_motion['s_0'] = reference_motion['s_0'][()]
+#         return reference_motion
+    
+#     data = load_motion('./trajectories/banana_pass1.npz')
+#     traj = copy.copy(dict(data))
+#     # print(traj['s_0']['motion_planned']['position'][-6:])
+
+#     traj['offset'] = np.zeros((3))
+
+#     traj['s_0']['motion_planned']['position'][-6:] = np.hstack((
+#         translation_tcdm[0],
+#         quat2euler(orientation_tcdm[0]),
+#     ))  # local frame
+
+#     # fixed object
+#     traj['s_0']['motion_planned']['fixed'] = {}
+#     traj['s_0']['motion_planned']['fixed']['position'] = np.array(target_obj_X_array_r_array)
+
+#     traj['object_translation'] = np.vstack((translation_tcdm))
+#     traj['object_orientation'] = np.vstack((orientation_tcdm))
+#     traj['length'] = len(translation_tcdm)
+#     # traj['SIM_SUBSTEPS'] = int(data['SIM_SUBSTEPS']/3)
+#     traj['DATA_SUBSTEPS'] = 1
+#     # traj['offset'] = offset
+#     np.savez(traj_path, **traj)  # save a dict as npz
+
+
+# if __name__ == "__main__":
+    # # Fixed object, e.g., a cup
+    # target_obj_path = './tcdm/envs/assets/meshes/objects/cup/cup.stl'
+
+    # # Moving object, e.g., a banana 
+    # float_obj_path = './tcdm/envs/assets/meshes/objects/cup/cup.stl'
+
+    # # Trajectory path
+    # traj_path = './new_agents/cup/cup_cup_move1/cup_cup_move1.npz'
+
+    # # Generate trajectory
+    # motion_plan_one_obj(target_obj_path, float_obj_path, traj_path)
