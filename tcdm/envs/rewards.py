@@ -145,7 +145,8 @@ class ObjectMimic(RewardFunction):
         # calculate both object "matching" reward and lift bonus
         obj_com_err = np.sqrt(norm2(tgt_obj_com - obj_com))
         obj_rot_err = rotation_distance(obj_rot, tgt_obj_rot) / np.pi
-        obj_reward = np.exp(-self.obj_err_scale * (obj_com_err + 0.1 * obj_rot_err))
+        # obj_reward = np.exp(-self.obj_err_scale * (obj_com_err + 0.1 * obj_rot_err))
+        obj_reward = np.exp(-self.obj_err_scale * (obj_com_err + 0.5 * obj_rot_err))
         lift_bonus = (tgt_obj_com[2] >= self._lift_z) and (obj_com[2] >= self._lift_z)
 
         obj_scale = self._object_reward_scale()

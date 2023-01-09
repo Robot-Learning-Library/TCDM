@@ -58,7 +58,6 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
             if object_name in filename and '.npz' in filename:
                 ref_traj_file = os.path.join(ref_traj_file_path, filename)
                 break
-        # import  pdb; pdb.set_trace()
         ori_obj_reference_motion = HandObjectReferenceMotion(object_name, ref_traj_file)
         ori_obj_pose = ori_obj_reference_motion.reset()[self._init_key]['position'][30:33] 
         ori_obj_pose[2] -= self.z_global_local_offset  # z+0.2 to global frame
