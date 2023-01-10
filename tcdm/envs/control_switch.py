@@ -56,6 +56,7 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
     def _get_obj_ini_pose(self, object_name):
         # ref_traj_file_path = './trajectories'
         object_name = object_name.split('_')[0] # cup_1 to cup
+        print(self.traj_folder)
         for filename in os.listdir(self.traj_folder):
             if object_name in filename and '.npz' in filename:
                 ref_traj_file = os.path.join(self.traj_folder, filename)
@@ -180,7 +181,7 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
 
     def after_step(self, physics):
         super().after_step(physics)
-        if self.during_switch:
+        if self.during_switch:  # in the switching process
             if self.additional_step_cnt < self.smooth_loosen_steps:
                 prefix = 'switch: loose hand'
             else:
@@ -191,11 +192,13 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
         print(f'{prefix} step: ', step, ' current object index: ', self.curr_move_obj_idx)
         switch = self.check_switch(physics)
 
-        if switch:
+        if switch:  # satisfy the switch condition, last reference motion is finished
             if not self.ref_only:
                 if self.additional_step_cnt < self.smooth_loosen_steps:
                     self.loosen_hand(physics)  # loosen the hand 
                 elif self.additional_step_cnt < self.smooth_loosen_steps + self.smooth_move_steps:
+                    self.move_hand_to_target(physics)  # move hand to the hanging pose
+                elif self.additional_step_cnt < self.smooth_loosen_steps + 2*self.smooth_move_steps:
                     self.move_hand_to_target(physics, self.target_hand_qpos)  # move hand to the pre-grasp pose for next object
                 else:
                     self.additional_step_cnt = 0
@@ -273,12 +276,15 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
 
         if target_hand_pose is None:
             target_hand_pose = self.start_state['position'][:30]  # set hand to initial joint position
+            target_hand_pose[1] = 0.4  # z-axis of hand
 
-        if self.additional_step_cnt == self.smooth_loosen_steps + 1: 
+        if self.additional_step_cnt == self.smooth_loosen_steps + 1 or self.additional_step_cnt == self.smooth_loosen_steps + self.smooth_move_steps + 1: 
             self.end_hand_full_pose = copy.deepcopy(physics.data.qpos[:30])
         # smoothly move to target hand pose (not grasping object)
         if self.additional_step_cnt <= self.smooth_loosen_steps + self.smooth_move_steps:
             physics.data.qpos[:30] = self.end_hand_full_pose + (target_hand_pose - self.end_hand_full_pose)*(self.additional_step_cnt-self.smooth_loosen_steps)/self.smooth_move_steps  # set hand to initial joint position
+        elif self.additional_step_cnt <= self.smooth_loosen_steps + 2*self.smooth_move_steps:
+            physics.data.qpos[:30] = self.end_hand_full_pose + (target_hand_pose - self.end_hand_full_pose)*(self.additional_step_cnt-self.smooth_loosen_steps-self.smooth_move_steps)/self.smooth_move_steps
         else:
             physics.data.qpos[:30] = target_hand_pose
 

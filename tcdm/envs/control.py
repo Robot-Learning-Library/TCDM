@@ -277,6 +277,7 @@ class GeneralReferenceMotionTask(SingleObjectTask):
             self.offset = self.reference_motion._reference_motion['initial_translation_offset']
         else:
             self.offset = np.zeros(3)
+        print('offset: ', self.offset)
         self._init_key = init_key
         object_name = reference_motion.object_name
         super().__init__(object_name, reward_fns, reward_weights, random)

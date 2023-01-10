@@ -65,9 +65,14 @@ def rollout(args, writer):
 
     if 'switch' in config['env']['task_kwargs'] and config['env']['task_kwargs']['switch']: 
         policies = []
-        policy_paths = ['outputs/2022-11-06/12-00-55',  # banana
-                        'outputs/2022-12-29/03-52-52'   # pan
+        policy_paths = [
+                        # 'outputs/2022-11-06/12-00-55',  # banana
+                        # 'outputs/2022-12-29/03-52-52'   # pan
+                        'outputs/2022-11-25/03-45-35',  # cup
+                        'outputs/2022-11-25/03-45-35'   # cup
             ]
+
+        saved_policy_path = ''
         for path in policy_paths:
             policies.append(PPO.load(os.path.join(path, 'restore_checkpoint')))
     else:  # single policy

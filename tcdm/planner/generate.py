@@ -2,6 +2,7 @@ import trimesh
 import copy
 import numpy as np
 import os
+import shutil
 from tcdm.planner.util.geometry import get_transform
 from tcdm.planner.rrt_star_bid import RRTStarBidirectional
 from tcdm.planner.search_space import SearchSpace
@@ -64,7 +65,9 @@ def motion_plan_one_obj(obj_list,
                         p_bound_buffer=0.1, 
                         q_bound_buffer=0.2,
                         ref_traj_file_path='./trajectories',
-                        visualize=False):
+                        visualize=False,
+                        copy_ref=False
+                        ):
     """_summary_
 
     :param obj_list: list of object names
@@ -241,6 +244,8 @@ def motion_plan_one_obj(obj_list,
     traj['offset'] = np.zeros((3))
     np.savez(save_path, **traj)  # save a dict as npz
     print('Saved trajectory to: ', save_path)
+    if copy_ref:
+        shutil.copy(ref_traj_file, '/'.join(save_path.split('/')[:-1]))  # copy ref file to planned traj folder
 
     return traj, save_path
 
@@ -337,11 +342,11 @@ def rrt(collision_checker,
 if __name__ == "__main__":
 
     # Define objects for new plan
-    # obj_list = ['cup', 'cup']
-    obj_list = ['toruslarge', 'knife']
+    obj_list = ['cup', 'cup']
+    # obj_list = ['toruslarge', 'knife']
     move_obj_idx = 0
-    # save_path = './new_agents/cup_cup_move1/traj_0.npz'
-    save_path = './new_agents/toruslarge_knife_move1/traj_0.npz'
+    save_path = './new_agents/cup_cup_move1/traj_0.npz'
+    # save_path = './new_agents/toruslarge_knife_move1/traj_0.npz'
 
     # Open the original trajectory file and see the initial pose for determining poses of the new plan
     # ref_traj_file = './new_agents/torus_knife_move1/toruslarge_inspect1.npz'
@@ -349,15 +354,15 @@ if __name__ == "__main__":
     # print(data['s_0'])
 
     # Define poses for new plan
-    # obj_Xs = [[-0.25, 0.1, -1.49e-01+0.2, 1.03e-04, 2.43e-04, 1.79e+00],
-    #           [-2.21e-03, 4.10e-03, -1.49e-01+0.2, 1.03e-04, 2.43e-04, 1.79e+00]]
-    # move_obj_target_X = [-0.15, 4.10e-03, -1.49e-01+0.2, 1.03e-04, 2.43e-04, 1.79e+00]  # move first cup from x=-0.25 to x=-0.10, while the fixed cup is at x=0
-    obj_Xs = [[-0.2, -1.43946832e-02,
-       -1.79232350e-01+0.2, -5.76184115e-05,  3.68892728e-05, -1.15680692e+00],
-              [3.27832237e-03+0.2, -3.30545511e-04,
-       -1.94037339e-01+0.2,  3.08262443e+00,  9.59880039e-02, -2.97606327e+00]]
-    move_obj_target_X = [0, -1.43946832e-02,
-       -1.79232350e-01+0.205, -5.76184115e-05,  3.68892728e-05, -1.15680692e+00]  # move torus from x=-0.2 to x=0, while the fixed knife is at x=0.2
+    obj_Xs = [[-0.25, 0.1, -1.49e-01+0.2, 1.03e-04, 2.43e-04, 1.79e+00],
+              [-2.21e-03, 4.10e-03, -1.49e-01+0.2, 1.03e-04, 2.43e-04, 1.79e+00]]
+    move_obj_target_X = [-0.15, 4.10e-03, -1.49e-01+0.2, 1.03e-04, 2.43e-04, 1.79e+00]  # move first cup from x=-0.25 to x=-0.10, while the fixed cup is at x=0
+    # obj_Xs = [[-0.2, -1.43946832e-02,
+    #    -1.79232350e-01+0.2, -5.76184115e-05,  3.68892728e-05, -1.15680692e+00],
+    #           [3.27832237e-03+0.2, -3.30545511e-04,
+    #    -1.94037339e-01+0.2,  3.08262443e+00,  9.59880039e-02, -2.97606327e+00]]
+    # move_obj_target_X = [0, -1.43946832e-02,
+    #    -1.79232350e-01+0.205, -5.76184115e-05,  3.68892728e-05, -1.15680692e+00]  # move torus from x=-0.2 to x=0, while the fixed knife is at x=0.2
 
     # Plan
     traj, save_path = motion_plan_one_obj(obj_list, 
@@ -369,7 +374,9 @@ if __name__ == "__main__":
                                           collision_threshold=0.003,
                                           p_bound_buffer=0.1, 
                                           q_bound_buffer=0.2,
-                                          visualize=True)
+                                          visualize=True,
+                                          copy_ref=True  # copy original ref file to planned folder
+                                          )
 
 # def motion_plan(target_obj_path, 
 #                 float_obj_path, 
