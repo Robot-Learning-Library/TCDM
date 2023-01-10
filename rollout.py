@@ -65,14 +65,29 @@ def rollout(args, writer):
 
     if 'switch' in config['env']['task_kwargs'] and config['env']['task_kwargs']['switch']: 
         policies = []
-        policy_paths = [
-                        # 'outputs/2022-11-06/12-00-55',  # banana
-                        # 'outputs/2022-12-29/03-52-52'   # pan
-                        'outputs/2022-11-25/03-45-35',  # cup
-                        'outputs/2022-11-25/03-45-35'   # cup
-            ]
-
-        saved_policy_path = ''
+        policy_paths = []
+        # policy_paths = [
+        #                 # 'outputs/2022-11-06/12-00-55',  # banana
+        #                 # 'outputs/2022-12-29/03-52-52'   # pan
+        #                 'outputs/2022-11-25/03-45-35',  # cup
+        #                 'outputs/2022-11-25/03-45-35'   # cup
+        #     ]
+        # automatically get general policies according to the names of objects, from 'outputs/general_policy'
+        obj_list = []
+        saved_policy_path = 'outputs/general_policy/'
+        with open("tcdm/envs/assets/task_trajs.yaml", "r") as stream:
+            try:
+                trajs = yaml.safe_load(stream)
+                names = trajs['obj_mimic']
+                for name in names:
+                    obj_list.append(name.split('_')[0])
+            except yaml.YAMLError as exc:
+                print(exc)
+        for obj in config['env']['name'].split('-'):
+            if obj in obj_list:
+                policy_paths.append(saved_policy_path+f'{obj}')
+        print('Load general policies from: ', policy_paths)
+        # load policy from path
         for path in policy_paths:
             policies.append(PPO.load(os.path.join(path, 'restore_checkpoint')))
     else:  # single policy
