@@ -28,6 +28,7 @@ python rollout.py --save_folder new_agents/banana_cup_pass1 --checkpoint outputs
 python rollout.py --save_folder new_agents/banana_fryingpan_pass1 --ref_only True --render
 # not ref only
 python rollout.py --save_folder new_agents/banana_fryingpan_pass1 --render
+python rollout.py --save_folder new_agents/toruslarge_knife_move1 --render
 python rollout.py --save_folder new_agents/cup_cup_move1 --render
 
 python visualize.py --save_folder new_agents/banana_fryingpan_pass1
