@@ -16,9 +16,9 @@
             <joint name="OBJRx" pos="0 0 0" axis="1 0 0" class="freejoint" />
             <joint name="OBJRy" pos="0 0 0" axis="0 1 0" class="freejoint" />
             <joint name="OBJRz" pos="0 0 0" axis="0 0 1" class="freejoint" />
-            <geom name="knife_visual" class="object_visual" mesh="knife" rgba="1 0 0 0.0" />
-            <geom name="knife_contact0" class="object_contact" mesh="contact0" rgba="0.75 0.75 0.75 1" />
-            <geom name="knife_contact1" class="object_contact" mesh="contact1" rgba="0.1 0.1 0.1 1" />
+            <geom solref=".0005 1" name="knife_visual" class="object_visual" mesh="knife" rgba="1 0 0 0.0" />
+            <geom solref=".0005 1" name="knife_contact0" class="object_contact" mesh="contact0" rgba="0.75 0.75 0.75 1" />
+            <geom solref=".0005 1" name="knife_contact1" class="object_contact" mesh="contact1" rgba="0.1 0.1 0.1 1" />
         </body>
     </worldbody>
 </mujoco>
