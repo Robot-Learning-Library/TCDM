@@ -192,7 +192,8 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
         print(f'{prefix} step: ', step, ' current object index: ', self.curr_move_obj_idx)
         switch = self.check_switch(physics)
 
-        if switch:  # satisfy the switch condition, last reference motion is finished
+        # Switch object - last reference motion is finished, loosen hand, move hand to target, reset step
+        if switch:
             if not self.ref_only:
                 if self.additional_step_cnt < self.smooth_loosen_steps:
                     self.loosen_hand(physics)  # loosen the hand 
@@ -215,25 +216,25 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
                 self.switch_obj(physics)
                 print('Switched trajectory!')
 
-        else:
-            if self.ref_only: # set position of objects (according to reference) and hand (fixed)
+        # Set position of objects (according to reference) and hand (fixed):
+        if self.ref_only:
 
-                # hand - leave it high up
-                physics.data.qpos[:30] = self.start_state['position']
-                physics.data.qvel[:30] = self.start_state['velocity']
-                physics.data.qpos[1] = 0.7  # z-axis of hand
+            # hand - leave it high up
+            physics.data.qpos[:30] = self.start_state['position']
+            physics.data.qvel[:30] = self.start_state['velocity']
+            physics.data.qpos[1] = 0.7  # z-axis of hand
 
-                # objects
-                for i, obj_name in enumerate(self.obj_names):
-                    if i == self.curr_move_obj_idx:
-                        physics.data.qpos[30+6*i:33+6*i] = self.reference_motion._reference_motion['object_translation'][self._step_count-1]
-                        physics.data.qpos[33+6*i:36+6*i] = quat2euler(self.reference_motion._reference_motion['object_orientation'][self._step_count-1])
-                        physics.data.qpos[30+6*i+2] += self.z_global_local_offset
+            # objects
+            for i, obj_name in enumerate(self.obj_names):
+                if i == self.curr_move_obj_idx:
+                    physics.data.qpos[30+6*i:33+6*i] = self.reference_motion._reference_motion['object_translation'][self._step_count-1]
+                    physics.data.qpos[33+6*i:36+6*i] = quat2euler(self.reference_motion._reference_motion['object_orientation'][self._step_count-1])
+                    physics.data.qpos[30+6*i+2] += self.z_global_local_offset
 
-                        # if switch:  # make object static at switch
-                        #     physics.data.qvel[30+6*i:30+6*i+6] = 6*[0]
-                    # else:
-                    #     physics.data.qvel[30+6*i:30+6*i+6] = 6*[0]  # make other objects static
+                    # if switch:  # make object static at switch
+                    #     physics.data.qvel[30+6*i:30+6*i+6] = 6*[0]
+                else:
+                    physics.data.qvel[30+6*i:30+6*i+6] = 6*[0]  # make other objects static
 
 
     def switch_obj(self, physics):

@@ -52,7 +52,7 @@ env:
     float_obj_seq: [0,1]
     use_saved_traj: False
     target_obj_Xs: [[-0.15, 4.10e-03, 0.051, 1.03e-04, 2.43e-04, 1.79e+00],
-                    [-0.05, 4.10e-03, 0.051, 1.03e-04, 2.43e-04, 1.79e+00]]
+                    [-0.1, 0.10, 0.051, 1.03e-04, 2.43e-04, 1.79e+00]]
     #!
     append_time: true
     pregrasp: motion_planned
