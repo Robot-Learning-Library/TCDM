@@ -7,7 +7,7 @@
 import copy
 import numpy as np
 from tcdm.util.motion import Pose, PoseAndVelocity
-
+from tcdm.util.geom import euler2quat
 
 class HandReferenceMotion(object):
     def __init__(self, motion_file, start_step=0):
@@ -227,23 +227,45 @@ import scipy.interpolate as interpolate
 OBJ_X_RANGE = [-0.2, 0.2]
 OBJ_Y_RANGE = [-0.1, 0.1]
 OBJ_Z_RANGE = [-0.1, 0.5]
-OBJ_QUAT_RANGE = [-1., 1]
+# OBJ_QUAT_RANGE = [-1., 1]
+OBJ_QUAT_INC_RANGE = [-0.1, 0.1] # incremental range
 OBJ_TRANS_RANGE = [OBJ_X_RANGE, OBJ_Y_RANGE, OBJ_Z_RANGE]
 
 
-def interpolate_data(data, range=None, offset=0, initial_point=None, random_sample=3): # random_sample is the number of random middle points
+def interpolate_data(data, range=None, offset=0, initial_point=None, incremental=False, random_sample=3): # random_sample is the number of random middle points
+    """_summary_
+
+    :param data: _description_
+    :type data: _type_
+    :param range: _description_, defaults to None
+    :type range: _type_, optional
+    :param offset: _description_, defaults to 0
+    :type offset: int, optional
+    :param initial_point: _description_, defaults to None
+    :type initial_point: _type_, optional
+    :param incremental: incremental value compared to last point, defaults to False
+    :type incremental: bool, optional
+    :param random_sample: _description_, defaults to 3
+    :type random_sample: int, optional
+    :return: _description_
+    :rtype: _type_
+    """
     if range is None:
         points = np.random.uniform(np.min(data), np.max(data), size=random_sample)
     else:
         points = np.random.uniform(*range, size=random_sample)
 
-    points += offset
+    # points += offset  # adding offset may lead to out of range
 
     if initial_point is not None: # set the same initial point as original traj
         points[0] = initial_point
     else:
         points[0] = data[0]
     len_points = points.shape[0]
+    
+    if incremental:
+        points = np.cumsum(points)  # add incremental value to last point
+
     f = interpolate.interp1d(np.arange(len_points), points, kind='quadratic', fill_value="extrapolate")  # ‘linear’, ‘nearest’, ‘nearest-up’, ‘zero’, ‘slinear’, ‘quadratic’, ‘cubic’, ‘previous’, or ‘next’.
 
     x_new = np.arange(0, len_points-1, (len_points-1)/data.shape[0])
@@ -276,8 +298,14 @@ def random_generate_ref(original_ref, initial_translation_offset=np.zeros(3)):
     new_trans_data = np.array(new_trans_data).T
 
     new_ori_data = []
-    for d in ori_data.T:
-        new_ori_data.append(interpolate_data(d, OBJ_QUAT_RANGE))
+    ini_ori_euler = original_ref['s_0']['motion_planned']['position'][33:37]  # dim 3
+    ini_ori_quat = euler2quat(ini_ori_euler)  # dim 4
+    for i, d in ori_data.T:
+        if original_ref['s_0']['motion_planned']['position'].shape[0] == 36: # 30 hand + 3 pos + 3 ori of object
+            initial_point = ini_ori_quat[i]
+        else:
+            initial_point = None
+        new_ori_data.append(interpolate_data(d, OBJ_QUAT_INC_RANGE, initial_point=initial_point, incremental=True))
     new_ori_data = np.array(new_ori_data).T
 
     new_traj = copy.copy(dict(original_ref))

@@ -30,6 +30,7 @@ python rollout.py --save_folder new_agents/banana_fryingpan_pass1 --ref_only Tru
 python rollout.py --save_folder new_agents/banana_fryingpan_pass1 --render
 python rollout.py --save_folder new_agents/toruslarge_knife_move1 --render
 python rollout.py --save_folder new_agents/cup_cup_move1 --render
+python rollout.py --save_folder new_agents/toruslarge_toruslarge_stack --render
 
 python visualize.py --save_folder new_agents/banana_fryingpan_pass1
 python visualize.py --save_folder new_agents/toruslarge_knife_move1
