@@ -262,7 +262,7 @@ def interpolate_data(data, range=None, offset=0, initial_point=None, incremental
     else:
         points[0] = data[0]
     len_points = points.shape[0]
-    
+
     if incremental:
         points = np.cumsum(points)  # add incremental value to last point
 
@@ -300,7 +300,7 @@ def random_generate_ref(original_ref, initial_translation_offset=np.zeros(3)):
     new_ori_data = []
     ini_ori_euler = original_ref['s_0']['motion_planned']['position'][33:37]  # dim 3
     ini_ori_quat = euler2quat(ini_ori_euler)  # dim 4
-    for i, d in ori_data.T:
+    for i, d in enumerate(ori_data.T):
         if original_ref['s_0']['motion_planned']['position'].shape[0] == 36: # 30 hand + 3 pos + 3 ori of object
             initial_point = ini_ori_quat[i]
         else:
