@@ -331,8 +331,8 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
             # object offset in global frame
             ori_obj_ini_pose = self._get_obj_ini_pose(self.current_object_name)
             self.offset = start_state[str(self.next_move_obj_idx)]['position'][:3] - ori_obj_ini_pose # 3 of 6 as xyz
-
             self.target_hand_qpos = start_state['position'][:30]
+ 
             # add object offset for hand; global to local (qpos)
             self.target_hand_qpos[0] -= self.offset[0]
             self.target_hand_qpos[1] += self.offset[2]

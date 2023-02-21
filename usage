@@ -1,3 +1,6 @@
+Test after training with arbitrary ref trajs
+python test.py env.name='fryingpan-cook2'
+
 # banana policy
 python rollout.py --save_folder outputs/2022-11-06/12-00-55  --render
 # cup policy
