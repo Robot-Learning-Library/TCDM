@@ -19,12 +19,12 @@
             <joint name="OBJRx" pos="0 0 0" axis="1 0 0" class="freejoint" />
             <joint name="OBJRy" pos="0 0 0" axis="0 1 0" class="freejoint" />
             <joint name="OBJRz" pos="0 0 0" axis="0 0 1" class="freejoint" />
-            <geom name="toruslarge_visual" class="object_visual" mesh="toruslarge" rgba="0 0.6 0 1.0" />
-            <geom name="toruslarge_contact0" class="object_contact" mesh="contact0"  />
-            <geom name="toruslarge_contact1" class="object_contact" mesh="contact1"  />
-            <geom name="toruslarge_contact2" class="object_contact" mesh="contact2"  />
-            <geom name="toruslarge_contact3" class="object_contact" mesh="contact3"  />
-            <geom name="toruslarge_contact4" class="object_contact" mesh="contact4"  />
+            <geom solref=".0005 1" name="toruslarge_visual" class="object_visual" mesh="toruslarge" rgba="0 0.6 0 1.0" />
+            <geom solref=".0005 1" name="toruslarge_contact0" class="object_contact" mesh="contact0"  />
+            <geom solref=".0005 1" name="toruslarge_contact1" class="object_contact" mesh="contact1"  />
+            <geom solref=".0005 1" name="toruslarge_contact2" class="object_contact" mesh="contact2"  />
+            <geom solref=".0005 1" name="toruslarge_contact3" class="object_contact" mesh="contact3"  />
+            <geom solref=".0005 1" name="toruslarge_contact4" class="object_contact" mesh="contact4"  />
         </body>
     </worldbody>
 </mujoco>

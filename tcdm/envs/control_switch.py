@@ -190,10 +190,10 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
             prefix = ''
         step = self.additional_step_cnt if self.during_switch else self._step_count
         print(f'{prefix} step: ', step, ' current object index: ', self.curr_move_obj_idx)
-        switch = self.check_switch(physics)
+        self.check_switch(physics)
 
         # Switch object - last reference motion is finished, loosen hand, move hand to target, reset step
-        if switch:
+        if self.switch_condition_satisfied:
             if not self.ref_only:
                 if self.additional_step_cnt < self.smooth_loosen_steps:
                     self.loosen_hand(physics)  # loosen the hand 
@@ -231,7 +231,7 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
                     physics.data.qpos[33+6*i:36+6*i] = quat2euler(self.reference_motion._reference_motion['object_orientation'][self._step_count-1])
                     physics.data.qpos[30+6*i+2] += self.z_global_local_offset
 
-                    # if switch:  # make object static at switch
+                    # if self.switch_condition_satisfied:  # make object static at switch
                     #     physics.data.qvel[30+6*i:30+6*i+6] = 6*[0]
                 else:
                     physics.data.qvel[30+6*i:30+6*i+6] = 6*[0]  # make other objects static
@@ -291,9 +291,9 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
 
 
     def check_switch(self, physics):
-        switch = self.reference_motion.next_done
+        self.switch_condition_satisfied = self.reference_motion.next_done
 
-        if switch and not self.during_switch:
+        if self.switch_condition_satisfied and not self.during_switch:
             self.during_switch = True
             if self.switch_num == self.switch_num_max:   # terminate episode
                 return False
@@ -339,10 +339,9 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
             self.target_hand_qpos[2] += self.offset[1]
             self.target_hand_qpos[2] += self.avoid_collision_z_shift
 
-        return switch
-
 
     def get_termination(self, physics):
-        if self.reference_motion.next_done and self.switch_num == self.switch_num_max:
-            return 0.0
+        # loosen hand and move to init pose after reference motion is done
+        if self.reference_motion.next_done and self.switch_num == self.switch_num_max and self.additional_step_cnt > self.smooth_loosen_steps + self.smooth_move_steps:
+            return 0.0 # terminate episode
         return super().get_termination(physics)
