@@ -34,7 +34,7 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
         self.traj_folder = traj_folder
         self.use_saved_traj = use_saved_traj
         self.smooth_loosen_steps = 30 # loosen hand in switch
-        self.smooth_move_steps = 20  # move hand to target pose in switch
+        self.smooth_move_steps = 40  # move hand to target pose in switch
 
         self.ref_only = ref_only
         self.obj_names = obj_names
@@ -195,11 +195,12 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
         # Switch object - last reference motion is finished, loosen hand, move hand to target, reset step
         if self.switch_condition_satisfied:
             if not self.ref_only:
-                if self.additional_step_cnt < self.smooth_loosen_steps:
+                self.additional_step_cnt +=1
+                if self.additional_step_cnt <= self.smooth_loosen_steps:
                     self.loosen_hand(physics)  # loosen the hand 
-                elif self.additional_step_cnt < self.smooth_loosen_steps + self.smooth_move_steps:
+                elif self.additional_step_cnt <= self.smooth_loosen_steps + self.smooth_move_steps:
                     self.move_hand_to_target(physics)  # move hand to the hanging pose
-                elif self.additional_step_cnt < self.smooth_loosen_steps + 2*self.smooth_move_steps:
+                elif self.additional_step_cnt <= self.smooth_loosen_steps + 2*self.smooth_move_steps:
                     self.move_hand_to_target(physics, self.target_hand_qpos)  # move hand to the pre-grasp pose for next object
                 else:
                     self.additional_step_cnt = 0
@@ -255,7 +256,6 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
 
 
     def loosen_hand(self, physics, ):
-        self.additional_step_cnt +=1
         target_hand_pose = np.zeros(24)   # fully open hand pose
         # target_hand_pose = self.start_state['position'][6:30]  # set hand to initial joint position
         if self.additional_step_cnt == 1: 
@@ -273,21 +273,25 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
 
 
     def move_hand_to_target(self, physics, target_hand_pose=None):
-        self.additional_step_cnt +=1
-
         if target_hand_pose is None:
-            target_hand_pose = self.start_state['position'][:30]  # set hand to initial joint position
-            target_hand_pose[1] = 0.4  # z-axis of hand
+            target_hand_pose = copy.deepcopy(self.start_state['position'][:30])  # set hand to initial joint position
+            target_hand_pose[1] = 0.2 # z-axis of hand
 
-        if self.additional_step_cnt == self.smooth_loosen_steps + 1 or self.additional_step_cnt == self.smooth_loosen_steps + self.smooth_move_steps + 1: 
+        if self.additional_step_cnt == self.smooth_loosen_steps + 1:
             self.end_hand_full_pose = copy.deepcopy(physics.data.qpos[:30])
-        # smoothly move to target hand pose (not grasping object)
+        elif self.additional_step_cnt == self.smooth_loosen_steps + self.smooth_move_steps + 1: 
+            self.end_hand_full_pose = self._last_hand_pose
+        # smoothly move to target hand pose: inital pose
         if self.additional_step_cnt <= self.smooth_loosen_steps + self.smooth_move_steps:
             physics.data.qpos[:30] = self.end_hand_full_pose + (target_hand_pose - self.end_hand_full_pose)*(self.additional_step_cnt-self.smooth_loosen_steps)/self.smooth_move_steps  # set hand to initial joint position
+            self._last_hand_pose = copy.deepcopy(physics.data.qpos[:30])
+        # smoothly move to target hand pose: pregrasp but not grasping object
         elif self.additional_step_cnt <= self.smooth_loosen_steps + 2*self.smooth_move_steps:
             physics.data.qpos[:30] = self.end_hand_full_pose + (target_hand_pose - self.end_hand_full_pose)*(self.additional_step_cnt-self.smooth_loosen_steps-self.smooth_move_steps)/self.smooth_move_steps
         else:
             physics.data.qpos[:30] = target_hand_pose
+
+        self.additional_step = True
 
 
     def check_switch(self, physics):

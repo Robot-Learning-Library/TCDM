@@ -280,7 +280,8 @@ def random_generate_ref(original_ref, initial_translation_offset=np.zeros(3)):
 
     if initial_translation_offset == 'random': # random valid translation offset for x and y
         initial_translation_offset = [np.random.uniform(*OBJ_X_RANGE), np.random.uniform(*OBJ_Y_RANGE), 0]
-
+    print('ini trans: ', initial_translation_offset)
+    
     if original_ref['s_0']['motion_planned']['position'].shape[0] == 36:
         # set initial position for object and hand with offset
         original_ref['s_0']['motion_planned']['position'][30:33] += initial_translation_offset  # obj: (x, y, z)
