@@ -46,7 +46,7 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
         # object offset in global frame
         self.avoid_collision_z_shift = 0.0
         self.current_object_name = self.obj_names[self.curr_move_obj_idx].split('/')[0]  # 'banana/object' to 'banana'
-        ori_obj_ini_pose = self._get_obj_ini_pose(self.current_object_name)
+        ori_obj_ini_pose, _ = self._get_obj_ini_pose(self.current_object_name)
         start_state = self.reference_motion.reset()[self._init_key]
         self.offset = start_state[str(self.curr_move_obj_idx)]['position'][:3] - ori_obj_ini_pose # xyz shift of object from the center; 3 of 6 dims as xyz
         print('Offset: ', self.offset)        
@@ -54,17 +54,22 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
 
 
     def _get_obj_ini_pose(self, object_name):
+        """
+        return: object initial pose in global frame
+        """
         # ref_traj_file_path = './trajectories'
         object_name = object_name.split('_')[0] # cup_1 to cup
-        print(self.traj_folder)
+        # ref_traj_file = os.path.join(self.traj_folder, 'traj_0.npz')  # generated traj_0 may have different init pose compared to original
         for filename in os.listdir(self.traj_folder):
             if object_name in filename and '.npz' in filename:
                 ref_traj_file = os.path.join(self.traj_folder, filename)
                 break
+
         ori_obj_reference_motion = HandObjectReferenceMotion(object_name, ref_traj_file)
         ori_obj_pose = ori_obj_reference_motion.reset()[self._init_key]['position'][30:33] 
         ori_obj_pose[2] -= self.z_global_local_offset  # z+0.2 to global frame
-        return ori_obj_pose
+        ori_hand_pose = ori_obj_reference_motion.reset()[self._init_key]['position'][:30]
+        return ori_obj_pose, ori_hand_pose
 
 
     @property
@@ -199,7 +204,9 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
                 if self.additional_step_cnt <= self.smooth_loosen_steps:
                     self.loosen_hand(physics)  # loosen the hand 
                 elif self.additional_step_cnt <= self.smooth_loosen_steps + self.smooth_move_steps:
-                    self.move_hand_to_target(physics)  # move hand to the hanging pose
+                    hanging_hand_pose = copy.deepcopy(self.start_state['position'][:30])  # set hand to initial joint position
+                    hanging_hand_pose[1] = 0.2 # z-axis of hand
+                    self.move_hand_to_target(physics, hanging_hand_pose)  # move hand to the hanging pose
                 elif self.additional_step_cnt <= self.smooth_loosen_steps + 2*self.smooth_move_steps:
                     self.move_hand_to_target(physics, self.target_hand_qpos)  # move hand to the pre-grasp pose for next object
                 else:
@@ -272,14 +279,10 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
         self.additional_step = True
 
 
-    def move_hand_to_target(self, physics, target_hand_pose=None):
-        if target_hand_pose is None:
-            target_hand_pose = copy.deepcopy(self.start_state['position'][:30])  # set hand to initial joint position
-            target_hand_pose[1] = 0.2 # z-axis of hand
-
-        if self.additional_step_cnt == self.smooth_loosen_steps + 1:
+    def move_hand_to_target(self, physics, target_hand_pose):
+        if self.additional_step_cnt == self.smooth_loosen_steps + 1:  # after loosen hand
             self.end_hand_full_pose = copy.deepcopy(physics.data.qpos[:30])
-        elif self.additional_step_cnt == self.smooth_loosen_steps + self.smooth_move_steps + 1: 
+        elif self.additional_step_cnt == self.smooth_loosen_steps + self.smooth_move_steps + 1: # after move hand to target (ini pose)
             self.end_hand_full_pose = self._last_hand_pose
         # smoothly move to target hand pose: inital pose
         if self.additional_step_cnt <= self.smooth_loosen_steps + self.smooth_move_steps:
@@ -288,6 +291,7 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
         # smoothly move to target hand pose: pregrasp but not grasping object
         elif self.additional_step_cnt <= self.smooth_loosen_steps + 2*self.smooth_move_steps:
             physics.data.qpos[:30] = self.end_hand_full_pose + (target_hand_pose - self.end_hand_full_pose)*(self.additional_step_cnt-self.smooth_loosen_steps-self.smooth_move_steps)/self.smooth_move_steps
+            print(physics.data.qpos[0])
         else:
             physics.data.qpos[:30] = target_hand_pose
 
@@ -333,19 +337,31 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
             start_state = self.next_reference_motion.reset()[self._init_key]
             
             # object offset in global frame
-            ori_obj_ini_pose = self._get_obj_ini_pose(self.current_object_name)
+            ori_obj_ini_pose, self.target_hand_qpos = self._get_obj_ini_pose(self.current_object_name)
             self.offset = start_state[str(self.next_move_obj_idx)]['position'][:3] - ori_obj_ini_pose # 3 of 6 as xyz
-            self.target_hand_qpos = start_state['position'][:30]
- 
-            # add object offset for hand; global to local (qpos)
+
+            # # add object offset for hand; global to local (qpos)
             self.target_hand_qpos[0] -= self.offset[0]
             self.target_hand_qpos[1] += self.offset[2]
             self.target_hand_qpos[2] += self.offset[1]
             self.target_hand_qpos[2] += self.avoid_collision_z_shift
 
+            ## below is same as above
+            # target_hand_pose = copy.deepcopy(self.target_hand_qpos[:30])
+            # target_hand_pose[0] = -self.target_hand_qpos[0]
+            # target_hand_pose[1] = self.target_hand_qpos[2]
+            # target_hand_pose[2] = self.target_hand_qpos[1]
+
+            # target_hand_pose[:3] += self.offset
+            # self.target_hand_qpos[0] = -target_hand_pose[0]
+            # self.target_hand_qpos[1] = target_hand_pose[2]
+            # self.target_hand_qpos[2] = target_hand_pose[1]
 
     def get_termination(self, physics):
         # loosen hand and move to init pose after reference motion is done
         if self.reference_motion.next_done and self.switch_num == self.switch_num_max and self.additional_step_cnt > self.smooth_loosen_steps + self.smooth_move_steps:
             return 0.0 # terminate episode
         return super().get_termination(physics)
+
+
+# ref: s_0: 'motion_planned'： 'position' [36]
