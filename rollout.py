@@ -37,13 +37,15 @@ def render(writer, physics, AA=2, height=512, width=512):
     writer.append_data(cv2.resize(img, (width, height), interpolation=cv2.INTER_AREA))
 
 
-def rollout(args, writer):
+def rollout(args):
     gym_wrap = True
     if args.checkpoint is not None:
         checkpoint_path = os.path.join(args.checkpoint, 'checkpoint.zip')  # use specified checkpoint
     else:
         checkpoint_path = os.path.join(args.save_folder, 'checkpoint.zip')
     save_folder = args.save_folder
+    task_name = save_folder.split('/')[-1]  # 'new_agents/banana_fryingpan_pass1
+    writer = imageio.get_writer(f'rollout_{task_name}.mp4', fps=25) if args.render else None
     # get experiment config
     config =  yaml.safe_load(open(os.path.join(save_folder, 'exp_config.yaml'), 'r'))
     if 'params' in config: # saved config may have one more level
@@ -139,14 +141,9 @@ def rollout(args, writer):
             df = pd.DataFrame(logger['a'])
             df.to_csv(f'a.csv', index=False, header=True)
 
+    writer.close() if writer is not None else None
 
 if __name__ == "__main__":
     args = parser.parse_args()
 
-    # configure writer
-    if args.render:
-        writer = imageio.get_writer('rollout.mp4', fps=25)
-        rollout(args, writer)
-        writer.close()
-    else:
-        rollout(args, None)
+    rollout(args)

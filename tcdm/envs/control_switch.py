@@ -284,7 +284,7 @@ class GeneralReferenceMotionSwitchTask(SingleObjectTask):
         # smoothly move to target hand pose: inital pose
         if self.additional_step_cnt <= self.smooth_loosen_steps + self.smooth_move_steps:
             physics.data.qpos[:30] = self.end_hand_full_pose + (target_hand_pose - self.end_hand_full_pose)*(self.additional_step_cnt-self.smooth_loosen_steps)/self.smooth_move_steps  # set hand to initial joint position
-            self._last_hand_pose = copy.deepcopy(physics.data.qpos[:30])
+            self._last_hand_pose = copy.deepcopy(physics.data.qpos[:30])  # record the pose after movement
         # smoothly move to target hand pose: pregrasp but not grasping object
         elif self.additional_step_cnt <= self.smooth_loosen_steps + 2*self.smooth_move_steps:
             physics.data.qpos[:30] = self.end_hand_full_pose + (target_hand_pose - self.end_hand_full_pose)*(self.additional_step_cnt-self.smooth_loosen_steps-self.smooth_move_steps)/self.smooth_move_steps
